@@ -368,7 +368,10 @@ public class FlutterEventKitPlugin: NSObject, FlutterPlugin, EventKitHostApi {
         ekReminder.priority = Int(Int64(reminder.priority ?? 0))
         
         if let calendarId = reminder.calendarId {
-            ekReminder.calendar = eventKitService.getCalendar(withIdentifier: calendarId) ?? EKCalendar()
+            ekReminder.calendar = eventKitService.getCalendar(withIdentifier: calendarId) ?? eventKitService.getDefaultReminderCalendar() ?? EKCalendar()
+        } else {
+            // Default to the default reminder calendar if no calendar is specified
+            ekReminder.calendar = eventKitService.getDefaultReminderCalendar() ?? EKCalendar()
         }
         
         return ekReminder
