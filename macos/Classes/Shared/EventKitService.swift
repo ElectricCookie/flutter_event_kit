@@ -32,13 +32,40 @@ public class EventKitService {
     
     public func getCalendarAuthorizationStatus() -> EKAuthorizationStatus {
         #if os(iOS)
-        if #available(iOS 17.0, *) {
-            return eventStore.fullAccessStatus
-        } else {
             return EKEventStore.authorizationStatus(for: .event)
-        }
         #else
-        return EKEventStore.authorizationStatus(for: .event)
+            return EKEventStore.authorizationStatus(for: .event)
+        #endif
+    }
+    
+    // MARK: - Reminder Access
+    
+    public func requestReminderAccess() async -> Bool {
+        if #available(iOS 17.0, macOS 14.0, *) {
+            return await withCheckedContinuation { continuation in
+                Task {
+                    do {
+                        let granted = try await eventStore.requestFullAccessToReminders()
+                        continuation.resume(returning: granted)
+                    } catch {
+                        continuation.resume(returning: false)
+                    }
+                }
+            }
+        } else {
+            return await withCheckedContinuation { continuation in
+                eventStore.requestAccess(to: .reminder) { granted, _ in
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
+    }
+    
+    public func getReminderAuthorizationStatus() -> EKAuthorizationStatus {
+        #if os(iOS)
+            return EKEventStore.authorizationStatus(for: .reminder)
+        #else
+            return EKEventStore.authorizationStatus(for: .reminder)
         #endif
     }
     
@@ -46,6 +73,14 @@ public class EventKitService {
     
     public func getCalendars() -> [EKCalendar] {
         return eventStore.calendars(for: .event)
+    }
+    
+    public func getReminderCalendars() -> [EKCalendar] {
+        return eventStore.calendars(for: .reminder)
+    }
+    
+    public func getDefaultReminderCalendar() -> EKCalendar? {
+        return eventStore.defaultCalendarForNewReminders()
     }
     
     public func getCalendar(withIdentifier identifier: String) -> EKCalendar? {
@@ -88,6 +123,16 @@ public class EventKitService {
     
     public func getAllReminders() async -> [EKReminder] {
         let predicate = eventStore.predicateForReminders(in: nil)
+        return await getReminders(matching: predicate)
+    }
+    
+    public func getCompletedReminders(startDate: Date?, endDate: Date?, calendars: [EKCalendar]?) async -> [EKReminder] {
+        let predicate = eventStore.predicateForCompletedReminders(withCompletionDateStarting: startDate, ending: endDate, calendars: calendars)
+        return await getReminders(matching: predicate)
+    }
+    
+    public func getIncompleteReminders(startDate: Date?, endDate: Date?, calendars: [EKCalendar]?) async -> [EKReminder] {
+        let predicate = eventStore.predicateForIncompleteReminders(withDueDateStarting: startDate, ending: endDate, calendars: calendars)
         return await getReminders(matching: predicate)
     }
     

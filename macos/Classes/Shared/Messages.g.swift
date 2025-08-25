@@ -331,12 +331,14 @@ private class EventKitHostApiCodecReader: FlutterStandardReader {
       case 130:
         return EventKitDateTime.fromList(self.readValue() as! [Any?])
       case 131:
-        return EventKitEvent.fromList(self.readValue() as! [Any?])
+        return EventKitDateTime.fromList(self.readValue() as! [Any?])
       case 132:
         return EventKitEvent.fromList(self.readValue() as! [Any?])
       case 133:
-        return EventKitRecurrenceRule.fromList(self.readValue() as! [Any?])
+        return EventKitEvent.fromList(self.readValue() as! [Any?])
       case 134:
+        return EventKitRecurrenceRule.fromList(self.readValue() as! [Any?])
+      case 135:
         return EventKitReminder.fromList(self.readValue() as! [Any?])
       default:
         return super.readValue(ofType: type)
@@ -355,17 +357,20 @@ private class EventKitHostApiCodecWriter: FlutterStandardWriter {
     } else if let value = value as? EventKitDateTime {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitEvent {
+    } else if let value = value as? EventKitDateTime {
       super.writeByte(131)
       super.writeValue(value.toList())
     } else if let value = value as? EventKitEvent {
       super.writeByte(132)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitRecurrenceRule {
+    } else if let value = value as? EventKitEvent {
       super.writeByte(133)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitReminder {
+    } else if let value = value as? EventKitRecurrenceRule {
       super.writeByte(134)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitReminder {
+      super.writeByte(135)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -391,13 +396,19 @@ class EventKitHostApiCodec: FlutterStandardMessageCodec {
 protocol EventKitHostApi {
   func requestCalendarAccess(completion: @escaping (Result<Bool, Error>) -> Void)
   func getCalendarAuthorizationStatus(completion: @escaping (Result<EventKitCalendarAuthorizationStatus, Error>) -> Void)
+  func requestReminderAccess(completion: @escaping (Result<Bool, Error>) -> Void)
+  func getReminderAuthorizationStatus(completion: @escaping (Result<EventKitCalendarAuthorizationStatus, Error>) -> Void)
   func getCalendars(completion: @escaping (Result<[EventKitCalendar], Error>) -> Void)
   func getCalendar(identifier: String, completion: @escaping (Result<EventKitCalendar?, Error>) -> Void)
+  func getReminderCalendars(completion: @escaping (Result<[EventKitCalendar], Error>) -> Void)
+  func getDefaultReminderCalendar(completion: @escaping (Result<EventKitCalendar?, Error>) -> Void)
   func getEvents(startDate: EventKitDateTime, endDate: EventKitDateTime, calendarIdentifiers: [String]?, completion: @escaping (Result<[EventKitEvent], Error>) -> Void)
   func getEvent(identifier: String, completion: @escaping (Result<EventKitEvent?, Error>) -> Void)
   func saveEvent(event: EventKitEvent, completion: @escaping (Result<String, Error>) -> Void)
   func removeEvent(identifier: String, completion: @escaping (Result<Bool, Error>) -> Void)
   func getReminders(predicate: String?, completion: @escaping (Result<[EventKitReminder], Error>) -> Void)
+  func getIncompleteReminders(calendarIdentifiers: [String]?, startDate: EventKitDateTime?, endDate: EventKitDateTime?, completion: @escaping (Result<[EventKitReminder], Error>) -> Void)
+  func getCompletedReminders(calendarIdentifiers: [String]?, startDate: EventKitDateTime?, endDate: EventKitDateTime?, completion: @escaping (Result<[EventKitReminder], Error>) -> Void)
   func saveReminder(reminder: EventKitReminder, completion: @escaping (Result<String, Error>) -> Void)
   func removeReminder(identifier: String, completion: @escaping (Result<Bool, Error>) -> Void)
 }
@@ -438,6 +449,36 @@ class EventKitHostApiSetup {
     } else {
       getCalendarAuthorizationStatusChannel.setMessageHandler(nil)
     }
+    let requestReminderAccessChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.requestReminderAccess", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      requestReminderAccessChannel.setMessageHandler { _, reply in
+        api.requestReminderAccess() { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      requestReminderAccessChannel.setMessageHandler(nil)
+    }
+    let getReminderAuthorizationStatusChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getReminderAuthorizationStatus", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getReminderAuthorizationStatusChannel.setMessageHandler { _, reply in
+        api.getReminderAuthorizationStatus() { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res.rawValue))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getReminderAuthorizationStatusChannel.setMessageHandler(nil)
+    }
     let getCalendarsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getCalendars", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       getCalendarsChannel.setMessageHandler { _, reply in
@@ -469,6 +510,36 @@ class EventKitHostApiSetup {
       }
     } else {
       getCalendarChannel.setMessageHandler(nil)
+    }
+    let getReminderCalendarsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getReminderCalendars", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getReminderCalendarsChannel.setMessageHandler { _, reply in
+        api.getReminderCalendars() { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getReminderCalendarsChannel.setMessageHandler(nil)
+    }
+    let getDefaultReminderCalendarChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getDefaultReminderCalendar", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getDefaultReminderCalendarChannel.setMessageHandler { _, reply in
+        api.getDefaultReminderCalendar() { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getDefaultReminderCalendarChannel.setMessageHandler(nil)
     }
     let getEventsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getEvents", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
@@ -556,6 +627,44 @@ class EventKitHostApiSetup {
       }
     } else {
       getRemindersChannel.setMessageHandler(nil)
+    }
+    let getIncompleteRemindersChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getIncompleteReminders", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getIncompleteRemindersChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let calendarIdentifiersArg: [String]? = nilOrValue(args[0])
+        let startDateArg: EventKitDateTime? = nilOrValue(args[1])
+        let endDateArg: EventKitDateTime? = nilOrValue(args[2])
+        api.getIncompleteReminders(calendarIdentifiers: calendarIdentifiersArg, startDate: startDateArg, endDate: endDateArg) { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getIncompleteRemindersChannel.setMessageHandler(nil)
+    }
+    let getCompletedRemindersChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getCompletedReminders", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getCompletedRemindersChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let calendarIdentifiersArg: [String]? = nilOrValue(args[0])
+        let startDateArg: EventKitDateTime? = nilOrValue(args[1])
+        let endDateArg: EventKitDateTime? = nilOrValue(args[2])
+        api.getCompletedReminders(calendarIdentifiers: calendarIdentifiersArg, startDate: startDateArg, endDate: endDateArg) { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getCompletedRemindersChannel.setMessageHandler(nil)
     }
     let saveReminderChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.saveReminder", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

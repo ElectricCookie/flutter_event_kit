@@ -2,56 +2,6 @@
 
 A Flutter plugin that provides type-safe access to the EventKit API for both iOS and macOS platforms. This plugin uses Pigeon for code generation and maintains a shared native implementation between platforms.
 
-## Features
-
-- **Cross-platform support**: iOS and macOS
-- **Type-safe communication**: Uses Pigeon for generated code
-- **Shared native implementation**: Single Swift codebase for both platforms
-- **Full EventKit access**: Calendars, events, reminders, and more
-- **Modern async/await API**: Built with Flutter's latest async patterns
-
-## Architecture
-
-### Shared Native Implementation
-
-The plugin uses a shared `EventKitService` class that contains all the EventKit logic. This service is imported by both the iOS and macOS plugin classes, ensuring:
-
-- **Code consistency** between platforms
-- **Easier maintenance** with a single source of truth
-- **Platform-specific handling** where needed through conditional compilation
-
-### Pigeon Integration
-
-Pigeon generates type-safe code for:
-
-- **Dart side**: `lib/src/messages.g.dart`
-- **Swift side**: `ios/Classes/Shared/Messages.g.swift`
-
-This eliminates the need for manual method channel implementation and provides compile-time type safety.
-
-### File Structure
-
-```
-flutter_event_kit/
-├── lib/
-│   ├── flutter_event_kit.dart          # Main plugin API
-│   ├── flutter_event_kit_platform_interface.dart
-│   └── src/
-│       └── messages.g.dart             # Pigeon-generated Dart code
-├── ios/Classes/
-│   ├── FlutterEventKitPlugin.swift     # iOS plugin implementation
-│   └── Shared/
-│       ├── EventKitService.swift       # Shared EventKit logic
-│       └── Messages.g.swift            # Pigeon-generated Swift code
-├── macos/Classes/
-│   ├── FlutterEventKitPlugin.swift     # macOS plugin implementation
-│   └── Shared/
-│       ├── EventKitService.swift       # Shared EventKit logic
-│       └── Messages.g.swift            # Pigeon-generated Swift code
-└── pigeons/
-    └── messages.dart                    # Pigeon message definitions
-```
-
 ## Installation
 
 Add the plugin to your `pubspec.yaml`:
@@ -59,6 +9,59 @@ Add the plugin to your `pubspec.yaml`:
 ```yaml
 dependencies:
   flutter_event_kit: ^0.0.1
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
+
+## Permissions
+
+### iOS
+
+Add to `ios/Runner/Info.plist`:
+
+```xml
+<key>NSCalendarsUsageDescription</key>
+<string>This app needs access to calendars to manage events and reminders.</string>
+```
+
+Add to `ios/Runner/Runner.entitlements`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
+</dict>
+</plist>
+```
+
+### macOS
+
+Add to `macos/Runner/Info.plist`:
+
+```xml
+<key>NSCalendarsUsageDescription</key>
+<string>This app needs access to calendars to manage events and reminders.</string>
+```
+
+Add to `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    ....
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
+</dict>
+</plist>
 ```
 
 ## Usage
@@ -125,9 +128,20 @@ String reminderId = await FlutterEventKit.saveReminder(reminder);
 List<Reminder> reminders = await FlutterEventKit.getReminders();
 ```
 
+## Requirements
+
+- **iOS**: 12.0+
+- **macOS**: 10.15+
+- **Flutter**: 3.3.0+
+- **Dart**: 3.9.0+
+
 ## Development
 
-### Code Generation
+### Code Generation with Pigeon
+
+This plugin uses [Pigeon](https://pub.dev/packages/pigeon) for type-safe code generation between Dart and Swift. The Pigeon definitions are located in `pigeons/messages.dart`.
+
+#### Regenerating Code
 
 To regenerate the Pigeon code after making changes to `pigeons/messages.dart`:
 
@@ -139,13 +153,71 @@ To regenerate the Pigeon code after making changes to `pigeons/messages.dart`:
 dart run pigeon --input pigeons/messages.dart
 ```
 
-### Adding New Features
+This generates:
+
+- **Dart side**: `lib/src/messages.g.dart`
+- **Swift side**: `shared/Classes/Shared/Messages.g.swift`
+
+#### Adding New Features
 
 1. **Update Pigeon definitions** in `pigeons/messages.dart`
-2. **Implement in shared service** in `ios/Classes/Shared/EventKitService.swift`
+2. **Implement in shared service** in `shared/Classes/Shared/EventKitService.swift`
 3. **Add conversion methods** in both platform plugins
 4. **Update Dart API** in `lib/flutter_event_kit.dart`
 5. **Regenerate code** using Pigeon
+
+### Swift Code Synchronization
+
+The plugin maintains a shared Swift implementation between iOS and macOS platforms. Use the sync script to ensure both platforms use the same code:
+
+```bash
+# Sync shared Swift code to iOS and macOS directories
+./tool/sync_swift_code.sh
+```
+
+This script:
+
+- Copies `FlutterEventKitPlugin.swift` to both platform directories
+- Syncs all shared files from `shared/Classes/Shared/` to both platforms
+- Ensures consistency between iOS and macOS implementations
+
+### Architecture
+
+#### Shared Native Implementation
+
+Pigeon generates type-safe code for:
+
+- **Dart side**: `lib/src/messages.g.dart`
+- **Swift side**: `ios/Classes/Shared/Messages.g.swift`
+
+This eliminates the need for manual method channel implementation and provides compile-time type safety.
+
+#### File Structure
+
+```
+flutter_event_kit/
+├── lib/
+│   ├── flutter_event_kit.dart          # Main plugin API
+│   ├── flutter_event_kit_platform_interface.dart
+│   └── src/
+│       └── messages.g.dart             # Pigeon-generated Dart code
+├── shared/Classes/                     # Shared Swift implementation
+│   ├── FlutterEventKitPlugin.swift
+│   └── Shared/
+│       ├── EventKitService.swift       # Shared EventKit logic
+│       └── Messages.g.swift            # Pigeon-generated Swift code
+├── ios/Classes/                        # iOS-specific files
+│   ├── FlutterEventKitPlugin.swift     # iOS plugin implementation
+│   └── Shared/                         # Synced from shared/
+├── macos/Classes/                      # macOS-specific files
+│   ├── FlutterEventKitPlugin.swift     # macOS plugin implementation
+│   └── Shared/                         # Synced from shared/
+├── pigeons/
+│   └── messages.dart                    # Pigeon message definitions
+└── tool/
+    ├── pigeon.sh                       # Pigeon code generation script
+    └── sync_swift_code.sh              # Swift code sync script
+```
 
 ### Platform-Specific Code
 
@@ -157,33 +229,6 @@ When platform-specific code is needed, use conditional compilation:
 #elseif os(macOS)
 // macOS-specific code
 #endif
-```
-
-## Requirements
-
-- **iOS**: 12.0+
-- **macOS**: 10.15+
-- **Flutter**: 3.3.0+
-- **Dart**: 3.9.0+
-
-## Permissions
-
-### iOS
-
-Add to `ios/Runner/Info.plist`:
-
-```xml
-<key>NSCalendarsUsageDescription</key>
-<string>This app needs access to calendars to manage events and reminders.</string>
-```
-
-### macOS
-
-Add to `macos/Runner/Info.plist`:
-
-```xml
-<key>NSCalendarsUsageDescription</key>
-<string>This app needs access to calendars to manage events and reminders.</string>
 ```
 
 ## Contributing

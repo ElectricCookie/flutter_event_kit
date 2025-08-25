@@ -1,6 +1,13 @@
+
+#if os(macOS)
 import Cocoa
 import FlutterMacOS
 import EventKit
+#elseif os(iOS)
+import UIKit
+import Flutter
+import EventKit
+#endif
 
 public class FlutterEventKitPlugin: NSObject, FlutterPlugin, EventKitHostApi {
     // MARK: - EventKitHostApi Implementation
@@ -28,6 +35,29 @@ public class FlutterEventKitPlugin: NSObject, FlutterPlugin, EventKitHostApi {
         }
     }
     
+    func requestReminderAccess(completion: @escaping (Result<Bool, any Error>) -> Void) {
+        Task {
+            do {
+                let result = await eventKitService.requestReminderAccess()
+                completion(.success(result))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func getReminderAuthorizationStatus(completion: @escaping (Result<EventKitCalendarAuthorizationStatus, any Error>) -> Void) {
+        Task {
+            do {
+                let status = eventKitService.getReminderAuthorizationStatus()
+                let convertedStatus = convertAuthorizationStatus(status)
+                completion(.success(convertedStatus))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
     func getCalendars(completion: @escaping (Result<[EventKitCalendar], any Error>) -> Void) {
         Task {
             do {
@@ -44,6 +74,33 @@ public class FlutterEventKitPlugin: NSObject, FlutterPlugin, EventKitHostApi {
         Task {
             do {
                 guard let ekCalendar = eventKitService.getCalendar(withIdentifier: identifier) else {
+                    completion(.success(nil))
+                    return
+                }
+                let calendar = convertCalendar(ekCalendar)
+                completion(.success(calendar))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func getReminderCalendars(completion: @escaping (Result<[EventKitCalendar], any Error>) -> Void) {
+        Task {
+            do {
+                let ekCalendars = eventKitService.getReminderCalendars()
+                let calendars = ekCalendars.map { convertCalendar($0) }
+                completion(.success(calendars))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func getDefaultReminderCalendar(completion: @escaping (Result<EventKitCalendar?, any Error>) -> Void) {
+        Task {
+            do {
+                guard let ekCalendar = eventKitService.getDefaultReminderCalendar() else {
                     completion(.success(nil))
                     return
                 }
@@ -119,8 +176,19 @@ public class FlutterEventKitPlugin: NSObject, FlutterPlugin, EventKitHostApi {
     func getReminders(predicate: String?, completion: @escaping (Result<[EventKitReminder], any Error>) -> Void) {
         Task {
             do {
-                let nsPredicate = predicate != nil ? NSPredicate(format: predicate!) : nil
-                let ekReminders = await eventKitService.getReminders(matching: nsPredicate)
+                let ekReminders: [EKReminder]
+                
+                if let predicate = predicate {
+                    // For custom predicates, we need to use predicateForReminders(in:) method
+                    // The predicate string should be a calendar identifier or nil for all calendars
+                    let calendars = predicate.isEmpty ? nil : [eventKitService.getCalendar(withIdentifier: predicate)].compactMap { $0 }
+                    let nsPredicate = eventKitService.eventStore.predicateForReminders(in: calendars)
+                    ekReminders = await eventKitService.getReminders(matching: nsPredicate)
+                } else {
+                    // Get all reminders
+                    ekReminders = await eventKitService.getAllReminders()
+                }
+                
                 let reminders = ekReminders.map { convertReminder($0) }
                 completion(.success(reminders))
             } catch {
@@ -155,10 +223,46 @@ public class FlutterEventKitPlugin: NSObject, FlutterPlugin, EventKitHostApi {
         }
     }
     
+    func getIncompleteReminders(calendarIdentifiers: [String]?, startDate: EventKitDateTime?, endDate: EventKitDateTime?, completion: @escaping (Result<[EventKitReminder], any Error>) -> Void) {
+        Task {
+            do {
+                let start = startDate != nil ? convertDateTime(startDate!) : nil
+                let end = endDate != nil ? convertDateTime(endDate!) : nil
+                let calendars = calendarIdentifiers?.compactMap { eventKitService.getCalendar(withIdentifier: $0) }
+                
+                let ekReminders = await eventKitService.getIncompleteReminders(startDate: start, endDate: end, calendars: calendars)
+                let reminders = ekReminders.map { convertReminder($0) }
+                completion(.success(reminders))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func getCompletedReminders(calendarIdentifiers: [String]?, startDate: EventKitDateTime?, endDate: EventKitDateTime?, completion: @escaping (Result<[EventKitReminder], any Error>) -> Void) {
+        Task {
+            do {
+                let start = startDate != nil ? convertDateTime(startDate!) : nil
+                let end = endDate != nil ? convertDateTime(endDate!) : nil
+                let calendars = calendarIdentifiers?.compactMap { eventKitService.getCalendar(withIdentifier: $0) }
+                
+                let ekReminders = await eventKitService.getCompletedReminders(startDate: start, endDate: end, calendars: calendars)
+                let reminders = ekReminders.map { convertReminder($0) }
+                completion(.success(reminders))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
     private let eventKitService = EventKitService()
     
     public static func register(with registrar: FlutterPluginRegistrar) {
+        #if os(iOS)
+        let messenger = registrar.messenger()
+        #else
         let messenger = registrar.messenger
+        #endif
         EventKitHostApiSetup.setUp(binaryMessenger: messenger, api: FlutterEventKitPlugin())
     }
     

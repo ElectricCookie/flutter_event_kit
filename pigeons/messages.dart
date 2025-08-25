@@ -4,7 +4,7 @@ import 'package:pigeon/pigeon.dart';
   PigeonOptions(
     dartOut: 'lib/src/messages.g.dart',
     dartOptions: DartOptions(copyrightHeader: []),
-    swiftOut: 'ios/Classes/Shared/Messages.g.swift',
+    swiftOut: 'shared/Classes/Shared/Messages.g.swift',
     swiftOptions: SwiftOptions(),
   ),
 )
@@ -17,10 +17,22 @@ abstract class EventKitHostApi {
   EventKitCalendarAuthorizationStatus getCalendarAuthorizationStatus();
 
   @async
+  bool requestReminderAccess();
+
+  @async
+  EventKitCalendarAuthorizationStatus getReminderAuthorizationStatus();
+
+  @async
   List<EventKitCalendar> getCalendars();
 
   @async
   EventKitCalendar? getCalendar(String identifier);
+
+  @async
+  List<EventKitCalendar> getReminderCalendars();
+
+  @async
+  EventKitCalendar? getDefaultReminderCalendar();
 
   @async
   List<EventKitEvent> getEvents(
@@ -40,6 +52,20 @@ abstract class EventKitHostApi {
 
   @async
   List<EventKitReminder> getReminders(String? predicate);
+
+  @async
+  List<EventKitReminder> getIncompleteReminders(
+    List<String>? calendarIdentifiers,
+    EventKitDateTime? startDate,
+    EventKitDateTime? endDate,
+  );
+
+  @async
+  List<EventKitReminder> getCompletedReminders(
+    List<String>? calendarIdentifiers,
+    EventKitDateTime? startDate,
+    EventKitDateTime? endDate,
+  );
 
   @async
   String saveReminder(EventKitReminder reminder);

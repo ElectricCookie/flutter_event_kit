@@ -365,17 +365,20 @@ class _EventKitHostApiCodec extends StandardMessageCodec {
     } else if (value is EventKitDateTime) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitEvent) {
+    } else if (value is EventKitDateTime) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else if (value is EventKitEvent) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitRecurrenceRule) {
+    } else if (value is EventKitEvent) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitReminder) {
+    } else if (value is EventKitRecurrenceRule) {
       buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitReminder) {
+      buffer.putUint8(135);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -392,12 +395,14 @@ class _EventKitHostApiCodec extends StandardMessageCodec {
       case 130: 
         return EventKitDateTime.decode(readValue(buffer)!);
       case 131: 
-        return EventKitEvent.decode(readValue(buffer)!);
+        return EventKitDateTime.decode(readValue(buffer)!);
       case 132: 
         return EventKitEvent.decode(readValue(buffer)!);
       case 133: 
-        return EventKitRecurrenceRule.decode(readValue(buffer)!);
+        return EventKitEvent.decode(readValue(buffer)!);
       case 134: 
+        return EventKitRecurrenceRule.decode(readValue(buffer)!);
+      case 135: 
         return EventKitReminder.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -469,6 +474,60 @@ class EventKitHostApi {
     }
   }
 
+  Future<bool> requestReminderAccess() async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.requestReminderAccess';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(null) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as bool?)!;
+    }
+  }
+
+  Future<EventKitCalendarAuthorizationStatus> getReminderAuthorizationStatus() async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getReminderAuthorizationStatus';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(null) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return EventKitCalendarAuthorizationStatus.values[replyList[0]! as int];
+    }
+  }
+
   Future<List<EventKitCalendar?>> getCalendars() async {
     const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getCalendars';
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
@@ -505,6 +564,55 @@ class EventKitHostApi {
     );
     final List<Object?>? replyList =
         await channel.send(<Object?>[arg_identifier]) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else {
+      return (replyList[0] as EventKitCalendar?);
+    }
+  }
+
+  Future<List<EventKitCalendar?>> getReminderCalendars() async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getReminderCalendars';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(null) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as List<Object?>?)!.cast<EventKitCalendar?>();
+    }
+  }
+
+  Future<EventKitCalendar?> getDefaultReminderCalendar() async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getDefaultReminderCalendar';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(null) as List<Object?>?;
     if (replyList == null) {
       throw _createConnectionError(channelName);
     } else if (replyList.length > 1) {
@@ -630,6 +738,60 @@ class EventKitHostApi {
     );
     final List<Object?>? replyList =
         await channel.send(<Object?>[arg_predicate]) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as List<Object?>?)!.cast<EventKitReminder?>();
+    }
+  }
+
+  Future<List<EventKitReminder?>> getIncompleteReminders(List<String?>? arg_calendarIdentifiers, EventKitDateTime? arg_startDate, EventKitDateTime? arg_endDate) async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getIncompleteReminders';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(<Object?>[arg_calendarIdentifiers, arg_startDate, arg_endDate]) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as List<Object?>?)!.cast<EventKitReminder?>();
+    }
+  }
+
+  Future<List<EventKitReminder?>> getCompletedReminders(List<String?>? arg_calendarIdentifiers, EventKitDateTime? arg_startDate, EventKitDateTime? arg_endDate) async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getCompletedReminders';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(<Object?>[arg_calendarIdentifiers, arg_startDate, arg_endDate]) as List<Object?>?;
     if (replyList == null) {
       throw _createConnectionError(channelName);
     } else if (replyList.length > 1) {

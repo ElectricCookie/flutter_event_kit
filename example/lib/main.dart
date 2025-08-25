@@ -31,45 +31,90 @@ class EventKitExample extends StatefulWidget {
 class _EventKitExampleState extends State<EventKitExample> {
   EventKitCalendarAuthorizationStatus _authStatus =
       EventKitCalendarAuthorizationStatus.notDetermined;
+  EventKitCalendarAuthorizationStatus _reminderAuthStatus =
+      EventKitCalendarAuthorizationStatus.notDetermined;
   List<EventKitCalendar> _calendars = [];
   List<EventKitEvent> _events = [];
+  List<EventKitCalendar> _reminderCalendars = [];
+  List<EventKitReminder> _reminders = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize the plugin before using it
+    FlutterEventKit.initialize();
     _checkPermissions();
   }
 
   Future<void> _checkPermissions() async {
-    final status = await FlutterEventKit.getCalendarAuthorizationStatus();
-    print('status: $status');
-    setState(() {
-      _authStatus = status;
-    });
+    try {
+      print('Checking permissions...');
+      final calendarStatus =
+          await FlutterEventKit.getCalendarAuthorizationStatus();
+      print('Calendar status: $calendarStatus');
 
-    if (status == EventKitCalendarAuthorizationStatus.authorized) {
-      _loadCalendars();
+      final reminderStatus =
+          await FlutterEventKit.getReminderAuthorizationStatus();
+      print('Reminder status: $reminderStatus');
+
+      setState(() {
+        _authStatus = calendarStatus;
+        _reminderAuthStatus = reminderStatus;
+      });
+
+      if (calendarStatus == EventKitCalendarAuthorizationStatus.authorized) {
+        _loadCalendars();
+        _loadEvents();
+      }
+
+      if (reminderStatus == EventKitCalendarAuthorizationStatus.authorized) {
+        _loadReminderCalendars();
+        _loadReminders();
+      }
+    } catch (e) {
+      print('Error checking permissions: $e');
+      _showSnackBar('Error checking permissions: $e');
     }
   }
 
   Future<void> _requestAccess() async {
-    print('requestAccess');
     setState(() {
       _isLoading = true;
     });
 
     try {
       final granted = await FlutterEventKit.requestCalendarAccess();
-      print('granted: $granted');
+
       if (granted) {
         await _checkPermissions();
       } else {
         _showSnackBar('Calendar access denied');
       }
     } catch (e) {
-      print('error: $e');
       _showSnackBar('Error requesting access: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _requestReminderAccess() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final granted = await FlutterEventKit.requestReminderAccess();
+
+      if (granted) {
+        await _checkPermissions();
+      } else {
+        _showSnackBar('Reminder access denied');
+      }
+    } catch (e) {
+      _showSnackBar('Error requesting reminder access: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -88,6 +133,17 @@ class _EventKitExampleState extends State<EventKitExample> {
     }
   }
 
+  Future<void> _loadReminderCalendars() async {
+    try {
+      final calendars = await FlutterEventKit.getReminderCalendars();
+      setState(() {
+        _reminderCalendars = calendars;
+      });
+    } catch (e) {
+      _showSnackBar('Error loading reminder calendars: $e');
+    }
+  }
+
   Future<void> _loadEvents() async {
     if (_calendars.isEmpty) return;
 
@@ -101,6 +157,54 @@ class _EventKitExampleState extends State<EventKitExample> {
       });
     } catch (e) {
       _showSnackBar('Error loading events: $e');
+    }
+  }
+
+  Future<void> _loadReminders() async {
+    try {
+      final reminders = await FlutterEventKit.getReminders();
+      setState(() {
+        _reminders = reminders;
+      });
+    } catch (e) {
+      _showSnackBar('Error loading reminders: $e');
+    }
+  }
+
+  Future<void> _loadIncompleteReminders() async {
+    try {
+      final reminders = await FlutterEventKit.getAllIncompleteReminders();
+      setState(() {
+        _reminders = reminders;
+      });
+      _showSnackBar('Loaded ${reminders.length} incomplete reminders');
+    } catch (e) {
+      _showSnackBar('Error loading incomplete reminders: $e');
+    }
+  }
+
+  Future<void> _loadOverdueReminders() async {
+    try {
+      final reminders = await FlutterEventKit.getAllOverdueReminders();
+      setState(() {
+        _reminders = reminders;
+      });
+      _showSnackBar('Loaded ${reminders.length} overdue reminders');
+    } catch (e) {
+      _showSnackBar('Error loading overdue reminders: $e');
+    }
+  }
+
+  Future<void> _loadRemindersDueToday() async {
+    try {
+      final reminders =
+          await FlutterEventKit.getRemindersDueTodayInDefaultList();
+      setState(() {
+        _reminders = reminders;
+      });
+      _showSnackBar('Loaded ${reminders.length} reminders due today');
+    } catch (e) {
+      _showSnackBar('Error loading reminders due today: $e');
     }
   }
 
@@ -129,6 +233,30 @@ class _EventKitExampleState extends State<EventKitExample> {
     }
   }
 
+  Future<void> _createSampleReminder() async {
+    if (_reminderCalendars.isEmpty) {
+      _showSnackBar('No reminder calendars available');
+      return;
+    }
+
+    try {
+      final now = DateTime.now();
+      final reminder = FlutterEventKit.createReminder(
+        title: 'Sample Reminder',
+        dueDate: now.add(const Duration(days: 1)),
+        notes:
+            'This is a sample reminder created by the Flutter EventKit plugin',
+        calendarId: _reminderCalendars.first.identifier,
+      );
+
+      final reminderId = await FlutterEventKit.saveReminder(reminder);
+      _showSnackBar('Reminder created with ID: $reminderId');
+      _loadReminders();
+    } catch (e) {
+      _showSnackBar('Error creating reminder: $e');
+    }
+  }
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(
       context,
@@ -149,10 +277,23 @@ class _EventKitExampleState extends State<EventKitExample> {
         ],
       ),
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createSampleEvent,
-        tooltip: 'Create Event',
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _createSampleReminder,
+            tooltip: 'Create Reminder',
+            heroTag: 'reminder',
+            child: const Icon(Icons.notifications),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: _createSampleEvent,
+            tooltip: 'Create Event',
+            heroTag: 'event',
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
@@ -162,15 +303,35 @@ class _EventKitExampleState extends State<EventKitExample> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    switch (_authStatus) {
-      case EventKitCalendarAuthorizationStatus.notDetermined:
-        return _buildPermissionRequest();
-      case EventKitCalendarAuthorizationStatus.denied:
-      case EventKitCalendarAuthorizationStatus.restricted:
+    final hasCalendarAccess =
+        _authStatus == EventKitCalendarAuthorizationStatus.authorized;
+    final hasReminderAccess =
+        _reminderAuthStatus == EventKitCalendarAuthorizationStatus.authorized;
+
+    // If both are denied or restricted, show permission denied
+    if (_authStatus == EventKitCalendarAuthorizationStatus.denied ||
+        _authStatus == EventKitCalendarAuthorizationStatus.restricted) {
+      if (_reminderAuthStatus == EventKitCalendarAuthorizationStatus.denied ||
+          _reminderAuthStatus ==
+              EventKitCalendarAuthorizationStatus.restricted) {
         return _buildPermissionDenied();
-      case EventKitCalendarAuthorizationStatus.authorized:
-        return _buildMainContent();
+      }
     }
+
+    // If neither is determined, show permission request
+    if (_authStatus == EventKitCalendarAuthorizationStatus.notDetermined &&
+        _reminderAuthStatus ==
+            EventKitCalendarAuthorizationStatus.notDetermined) {
+      return _buildPermissionRequest();
+    }
+
+    // If we have at least one type of access, show main content
+    if (hasCalendarAccess || hasReminderAccess) {
+      return _buildMainContent();
+    }
+
+    // Otherwise show permission request
+    return _buildPermissionRequest();
   }
 
   Widget _buildPermissionRequest() {
@@ -181,19 +342,28 @@ class _EventKitExampleState extends State<EventKitExample> {
           const Icon(Icons.calendar_today, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
           const Text(
-            'Calendar Access Required',
+            'Calendar & Reminder Access Required',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           const Text(
-            'This app needs access to your calendar to manage events and reminders.',
+            'This app needs access to your calendar and reminders to manage events and reminders.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _requestAccess,
-            child: const Text('Grant Access'),
+          Column(
+            children: [
+              ElevatedButton(
+                onPressed: _requestAccess,
+                child: const Text('Grant Calendar Access'),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _requestReminderAccess,
+                child: const Text('Grant Reminder Access'),
+              ),
+            ],
           ),
         ],
       ),
@@ -213,9 +383,30 @@ class _EventKitExampleState extends State<EventKitExample> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Calendar access was denied. Please enable it in Settings.',
+            'Calendar and/or reminder access was denied. Please enable them in Settings.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          Column(
+            children: [
+              if (_authStatus != EventKitCalendarAuthorizationStatus.authorized)
+                ElevatedButton(
+                  onPressed: _requestAccess,
+                  child: const Text('Request Calendar Access'),
+                ),
+              if (_authStatus !=
+                      EventKitCalendarAuthorizationStatus.authorized &&
+                  _reminderAuthStatus !=
+                      EventKitCalendarAuthorizationStatus.authorized)
+                const SizedBox(height: 12),
+              if (_reminderAuthStatus !=
+                  EventKitCalendarAuthorizationStatus.authorized)
+                ElevatedButton(
+                  onPressed: _requestReminderAccess,
+                  child: const Text('Request Reminder Access'),
+                ),
+            ],
           ),
         ],
       ),
@@ -223,16 +414,81 @@ class _EventKitExampleState extends State<EventKitExample> {
   }
 
   Widget _buildMainContent() {
+    final hasCalendarAccess =
+        _authStatus == EventKitCalendarAuthorizationStatus.authorized;
+    final hasReminderAccess =
+        _reminderAuthStatus == EventKitCalendarAuthorizationStatus.authorized;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildCalendarsSection(),
-          const SizedBox(height: 24),
-          _buildEventsSection(),
+          if (hasCalendarAccess) ...[
+            _buildCalendarsSection(),
+            const SizedBox(height: 24),
+            _buildEventsSection(),
+            const SizedBox(height: 24),
+          ],
+          if (hasReminderAccess) ...[
+            _buildReminderCalendarsSection(),
+            const SizedBox(height: 24),
+            _buildRemindersSection(),
+          ],
+          if (!hasCalendarAccess || !hasReminderAccess) ...[
+            _buildMissingPermissionsSection(),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildMissingPermissionsSection() {
+    final hasCalendarAccess =
+        _authStatus == EventKitCalendarAuthorizationStatus.authorized;
+    final hasReminderAccess =
+        _reminderAuthStatus == EventKitCalendarAuthorizationStatus.authorized;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Missing Permissions',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        if (!hasCalendarAccess) ...[
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.calendar_today, color: Colors.orange),
+              title: const Text('Calendar Access Required'),
+              subtitle: const Text(
+                'Enable calendar access to view and manage events',
+              ),
+              trailing: ElevatedButton(
+                onPressed: _requestAccess,
+                child: const Text('Grant Access'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (!hasReminderAccess) ...[
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.notifications, color: Colors.orange),
+              title: const Text('Reminder Access Required'),
+              subtitle: const Text(
+                'Enable reminder access to view and manage reminders',
+              ),
+              trailing: ElevatedButton(
+                onPressed: _requestReminderAccess,
+                child: const Text('Grant Access'),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -264,6 +520,52 @@ class _EventKitExampleState extends State<EventKitExample> {
                 child: ListTile(
                   leading: Icon(
                     Icons.calendar_today,
+                    color: _parseColor(calendar.color),
+                  ),
+                  title: Text(calendar.title),
+                  subtitle: Text(calendar.source ?? 'Unknown source'),
+                  trailing: calendar.isEditable
+                      ? const Icon(Icons.edit, color: Colors.green)
+                      : const Icon(Icons.lock, color: Colors.grey),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildReminderCalendarsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Reminder Calendars',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: _loadReminderCalendars,
+              child: const Text('Refresh'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_reminderCalendars.isEmpty)
+          const Text('No reminder calendars found')
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _reminderCalendars.length,
+            itemBuilder: (context, index) {
+              final calendar = _reminderCalendars[index];
+              return Card(
+                child: ListTile(
+                  leading: Icon(
+                    Icons.notifications,
                     color: _parseColor(calendar.color),
                   ),
                   title: Text(calendar.title),
@@ -321,6 +623,92 @@ class _EventKitExampleState extends State<EventKitExample> {
                     _getEventStatusIcon(event.status),
                     color: _getEventStatusColor(event.status),
                   ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRemindersSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Reminders',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(onPressed: _loadReminders, child: const Text('All')),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _loadIncompleteReminders,
+                child: const Text('Incomplete'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _loadOverdueReminders,
+                child: const Text('Overdue'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _loadRemindersDueToday,
+                child: const Text('Due Today'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_reminders.isEmpty)
+          const Text('No reminders found')
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _reminders.length,
+            itemBuilder: (context, index) {
+              final reminder = _reminders[index];
+              return Card(
+                child: ListTile(
+                  leading: Icon(
+                    reminder.isCompleted
+                        ? Icons.check_circle
+                        : Icons.notifications,
+                    color: reminder.isCompleted ? Colors.green : Colors.purple,
+                  ),
+                  title: Text(
+                    reminder.title,
+                    style: TextStyle(
+                      decoration: reminder.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (reminder.dueDate != null)
+                        Text(_formatDateTime(reminder.dueDate!)),
+                      if (reminder.notes != null) Text(reminder.notes!),
+                      if (reminder.priority != null)
+                        Text('Priority: ${reminder.priority}'),
+                    ],
+                  ),
+                  trailing: reminder.isCompleted
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : const Icon(Icons.pending, color: Colors.orange),
                 ),
               );
             },
