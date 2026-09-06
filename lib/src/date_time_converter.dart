@@ -1,10 +1,14 @@
-import 'dart:core' as dart;
 import 'messages.g.dart';
 
-/// Utility class for converting between Dart's DateTime and Pigeon's EKDateTime
+/// Converts between Dart [DateTime] and Pigeon [EventKitDateTime].
+///
+/// [EventKitDateTime] stores **wall-clock** components in the event's IANA
+/// time zone (or the device zone when the event is floating / all-day).
+/// Instant identity for sync is [EventKitEvent.startDateUnixMs] /
+/// [EventKitEvent.endDateUnixMs] (UTC milliseconds since epoch).
 class DateTimeConverter {
-  /// Convert Dart DateTime to Pigeon EKDateTime
-  static EventKitDateTime toPigeon(dart.DateTime dartDateTime) {
+  /// Wall-clock components of [dartDateTime] in that DateTime's calendar.
+  static EventKitDateTime toPigeon(DateTime dartDateTime) {
     return EventKitDateTime(
       year: dartDateTime.year,
       month: dartDateTime.month,
@@ -16,9 +20,9 @@ class DateTimeConverter {
     );
   }
 
-  /// Convert Pigeon EKDateTime to Dart DateTime
-  static dart.DateTime toDart(EventKitDateTime pigeonDateTime) {
-    return dart.DateTime(
+  /// Interprets [pigeonDateTime] as a local (wall-clock) Dart DateTime.
+  static DateTime toDart(EventKitDateTime pigeonDateTime) {
+    return DateTime(
       pigeonDateTime.year,
       pigeonDateTime.month,
       pigeonDateTime.day,
@@ -29,13 +33,19 @@ class DateTimeConverter {
     );
   }
 
-  /// Convert nullable Dart DateTime to nullable Pigeon EKDateTime
-  static EventKitDateTime? toPigeonNullable(dart.DateTime? dartDateTime) {
+  /// UTC instant from EventKit unix milliseconds.
+  static DateTime? utcFromUnixMs(int? unixMs) {
+    if (unixMs == null) {
+      return null;
+    }
+    return DateTime.fromMillisecondsSinceEpoch(unixMs, isUtc: true);
+  }
+
+  static EventKitDateTime? toPigeonNullable(DateTime? dartDateTime) {
     return dartDateTime != null ? toPigeon(dartDateTime) : null;
   }
 
-  /// Convert nullable Pigeon EKDateTime to nullable Dart DateTime
-  static dart.DateTime? toDartNullable(EventKitDateTime? pigeonDateTime) {
+  static DateTime? toDartNullable(EventKitDateTime? pigeonDateTime) {
     return pigeonDateTime != null ? toDart(pigeonDateTime) : null;
   }
 }

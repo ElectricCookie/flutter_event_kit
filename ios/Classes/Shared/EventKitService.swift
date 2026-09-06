@@ -9,64 +9,64 @@ public class EventKitService {
     
     // MARK: - Calendar Access
     
-    public func requestCalendarAccess() async -> Bool {
+    public func requestCalendarAccess() async -> Result<Bool, Error> {
         if #available(iOS 17.0, macOS 14.0, *) {
             return await withCheckedContinuation { continuation in
                 Task {
                     do {
                         let granted = try await eventStore.requestFullAccessToEvents()
-                        continuation.resume(returning: granted)
+                        continuation.resume(returning: .success(granted))
                     } catch {
-                        continuation.resume(returning: false)
+                        continuation.resume(returning: .failure(error))
                     }
                 }
             }
         } else {
             return await withCheckedContinuation { continuation in
-                eventStore.requestAccess(to: .event) { granted, _ in
-                    continuation.resume(returning: granted)
+                eventStore.requestAccess(to: .event) { granted, error in
+                    if let error = error {
+                        continuation.resume(returning: .failure(error))
+                    } else {
+                        continuation.resume(returning: .success(granted))
+                    }
                 }
             }
         }
     }
     
     public func getCalendarAuthorizationStatus() -> EKAuthorizationStatus {
-        #if os(iOS)
-            return EKEventStore.authorizationStatus(for: .event)
-        #else
-            return EKEventStore.authorizationStatus(for: .event)
-        #endif
+        return EKEventStore.authorizationStatus(for: .event)
     }
     
     // MARK: - Reminder Access
     
-    public func requestReminderAccess() async -> Bool {
+    public func requestReminderAccess() async -> Result<Bool, Error> {
         if #available(iOS 17.0, macOS 14.0, *) {
             return await withCheckedContinuation { continuation in
                 Task {
                     do {
                         let granted = try await eventStore.requestFullAccessToReminders()
-                        continuation.resume(returning: granted)
+                        continuation.resume(returning: .success(granted))
                     } catch {
-                        continuation.resume(returning: false)
+                        continuation.resume(returning: .failure(error))
                     }
                 }
             }
         } else {
             return await withCheckedContinuation { continuation in
-                eventStore.requestAccess(to: .reminder) { granted, _ in
-                    continuation.resume(returning: granted)
+                eventStore.requestAccess(to: .reminder) { granted, error in
+                    if let error = error {
+                        continuation.resume(returning: .failure(error))
+                    } else {
+                        continuation.resume(returning: .success(granted))
+                    }
                 }
             }
         }
     }
     
     public func getReminderAuthorizationStatus() -> EKAuthorizationStatus {
-        #if os(iOS)
-            return EKEventStore.authorizationStatus(for: .reminder)
-        #else
-            return EKEventStore.authorizationStatus(for: .reminder)
-        #endif
+        return EKEventStore.authorizationStatus(for: .reminder)
     }
     
     // MARK: - Calendars
@@ -98,12 +98,32 @@ public class EventKitService {
         return eventStore.event(withIdentifier: identifier)
     }
     
-    public func saveEvent(_ event: EKEvent) throws {
-        try eventStore.save(event, span: .thisEvent, commit: true)
+    public func getEvent(withCalendarItemIdentifier identifier: String) -> EKEvent? {
+        return eventStore.calendarItem(withIdentifier: identifier) as? EKEvent
+    }
+
+    public func calendarItem(withIdentifier identifier: String) -> EKCalendarItem? {
+        return eventStore.calendarItem(withIdentifier: identifier)
+    }
+
+    public func calendarItems(withExternalIdentifier identifier: String) -> [EKCalendarItem] {
+        return eventStore.calendarItems(withExternalIdentifier: identifier)
+    }
+
+    public func calendarItemsWithExternalIdentifier(_ identifier: String) -> [EKEvent] {
+        return eventStore.calendarItems(withExternalIdentifier: identifier).compactMap { $0 as? EKEvent }
+    }
+
+    public func defaultCalendarForNewEvents() -> EKCalendar? {
+        return eventStore.defaultCalendarForNewEvents
     }
     
-    public func removeEvent(_ event: EKEvent) throws {
-        try eventStore.remove(event, span: .thisEvent, commit: true)
+    public func saveEvent(_ event: EKEvent, span: EKSpan = .thisEvent) throws {
+        try eventStore.save(event, span: span, commit: true)
+    }
+    
+    public func removeEvent(_ event: EKEvent, span: EKSpan = .thisEvent) throws {
+        try eventStore.remove(event, span: span, commit: true)
     }
     
     // MARK: - Reminders

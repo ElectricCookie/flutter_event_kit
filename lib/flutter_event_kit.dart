@@ -4,15 +4,46 @@ import 'package:flutter/services.dart';
 
 export 'src/messages.g.dart';
 
+class _EventKitFlutterCallbacks implements EventKitFlutterApi {
+  @override
+  void onCalendarAccessChanged(EventKitCalendarAuthorizationStatus status) {
+    FlutterEventKit._onCalendarAccessChanged?.call(status);
+  }
+
+  @override
+  void onEventsChanged() {
+    FlutterEventKit._onEventsChanged?.call();
+  }
+}
+
 class FlutterEventKit {
   static EventKitHostApi? _api;
+  static bool _flutterApiSetup = false;
+  static void Function()? _onEventsChanged;
+  static void Function(EventKitCalendarAuthorizationStatus status)?
+      _onCalendarAccessChanged;
 
   /// Initialize the plugin. This should be called before using any methods.
   static void initialize() {
-    if (_api == null) {
-      // Ensure we use the default BinaryMessenger which routes to the host platform
-      _api = EventKitHostApi(binaryMessenger: null);
+    _api ??= EventKitHostApi(binaryMessenger: null);
+    if (!_flutterApiSetup) {
+      EventKitFlutterApi.setup(_EventKitFlutterCallbacks());
+      _flutterApiSetup = true;
     }
+  }
+
+  /// Invoked when EventKit posts `EKEventStoreChanged`.
+  static void setEventsChangedListener(void Function()? callback) {
+    initialize();
+    _onEventsChanged = callback;
+  }
+
+  /// Invoked after a calendar access request completes.
+  static void setCalendarAccessChangedListener(
+    void Function(EventKitCalendarAuthorizationStatus status)? callback,
+  ) {
+    initialize();
+    _onCalendarAccessChanged = callback;
   }
 
   /// Get the EventKitHostApi instance, initializing if necessary
@@ -122,14 +153,54 @@ class FlutterEventKit {
     return await _apiInstance.getEvent(identifier);
   }
 
-  /// Save an event to the calendar
-  static Future<String> saveEvent(EventKitEvent event) async {
-    return await _apiInstance.saveEvent(event);
+  /// Get an event by [EKCalendarItem.calendarItemIdentifier].
+  static Future<EventKitEvent?> getEventByCalendarItemIdentifier(
+    String identifier,
+  ) async {
+    return await _apiInstance.getEventByCalendarItemIdentifier(identifier);
   }
 
-  /// Remove an event from the calendar
-  static Future<bool> removeEvent(String identifier) async {
-    return await _apiInstance.removeEvent(identifier);
+  /// Events sharing a CalDAV UID ([calendarItemExternalIdentifier]).
+  static Future<List<EventKitEvent>> getCalendarItemsWithExternalIdentifier(
+    String externalIdentifier,
+  ) async {
+    final events = await _apiInstance.getCalendarItemsWithExternalIdentifier(
+      externalIdentifier,
+    );
+    return events.whereType<EventKitEvent>().toList();
+  }
+
+  /// Save an event. When [event.identifier] / [event.eventIdentifier] is set,
+  /// the existing EventKit event is mutated instead of duplicated.
+  static Future<String> saveEvent(
+    EventKitEvent event, {
+    EventKitSpan span = EventKitSpan.thisEvent,
+  }) async {
+    return await _apiInstance.saveEvent(event, span);
+  }
+
+  /// Remove an event. Use [EventKitSpan.futureEvents] for this-and-future
+  /// of a recurring series.
+  static Future<bool> removeEvent(
+    String identifier, {
+    EventKitSpan span = EventKitSpan.thisEvent,
+  }) async {
+    return await _apiInstance.removeEvent(identifier, span);
+  }
+
+  /// Presents the system event view (iOS EventKitUI) for [eventIdentifier].
+  ///
+  /// Completes when the view is dismissed. Returns `false` on platforms that
+  /// cannot present EventKitUI (macOS) or when the event cannot be found.
+  static Future<bool> presentEventView(String eventIdentifier) async {
+    try {
+      return await _apiInstance.presentEventView(eventIdentifier);
+    } catch (e) {
+      throw PlatformException(
+        code: 'present_event_view_error',
+        message: 'Failed to present event view: $e',
+      );
+    }
   }
 
   // MARK: - Reminders
@@ -168,6 +239,8 @@ class FlutterEventKit {
       title: title,
       startDate: DateTimeConverter.toPigeon(startDate),
       endDate: DateTimeConverter.toPigeon(endDate),
+      startDateUnixMs: startDate.millisecondsSinceEpoch,
+      endDateUnixMs: endDate.millisecondsSinceEpoch,
       isAllDay: isAllDay,
       availability: EventKitEventAvailability.busy,
       status: EventKitEventStatus.none,

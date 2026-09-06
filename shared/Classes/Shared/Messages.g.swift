@@ -71,6 +71,66 @@ enum EventKitRecurrenceFrequency: Int {
   case yearly = 3
 }
 
+enum EventKitSpan: Int {
+  case thisEvent = 0
+  case futureEvents = 1
+}
+
+enum EventKitCalendarType: Int {
+  case local = 0
+  case calDAV = 1
+  case exchange = 2
+  case subscription = 3
+  case birthday = 4
+}
+
+enum EventKitSourceType: Int {
+  case local = 0
+  case calDAV = 1
+  case exchange = 2
+  case mobileMe = 3
+  case subscribed = 4
+  case birthdays = 5
+}
+
+enum EventKitParticipantStatus: Int {
+  case unknown = 0
+  case pending = 1
+  case accepted = 2
+  case declined = 3
+  case tentative = 4
+  case delegated = 5
+  case completed = 6
+  case inProcess = 7
+}
+
+enum EventKitParticipantRole: Int {
+  case unknown = 0
+  case required = 1
+  case optional = 2
+  case chair = 3
+  case nonParticipant = 4
+}
+
+enum EventKitParticipantType: Int {
+  case unknown = 0
+  case person = 1
+  case room = 2
+  case resource = 3
+  case group = 4
+}
+
+enum EventKitAlarmProximity: Int {
+  case none = 0
+  case enter = 1
+  case leave = 2
+}
+
+/// Wall-clock date-time components (not UTC unless the event time zone is UTC).
+///
+/// Instant identity for sync lives on [EventKitEvent.startDateUnixMs] /
+/// [EventKitEvent.endDateUnixMs].
+///
 /// Generated class from Pigeon that represents data sent in messages.
 struct EventKitDateTime {
   var year: Int64
@@ -114,31 +174,241 @@ struct EventKitDateTime {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
+struct EventKitStructuredLocation {
+  var title: String? = nil
+  var latitude: Double? = nil
+  var longitude: Double? = nil
+  var radius: Double? = nil
+
+  static func fromList(_ list: [Any?]) -> EventKitStructuredLocation? {
+    let title: String? = nilOrValue(list[0])
+    let latitude: Double? = nilOrValue(list[1])
+    let longitude: Double? = nilOrValue(list[2])
+    let radius: Double? = nilOrValue(list[3])
+
+    return EventKitStructuredLocation(
+      title: title,
+      latitude: latitude,
+      longitude: longitude,
+      radius: radius
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      title,
+      latitude,
+      longitude,
+      radius,
+    ]
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct EventKitParticipant {
+  var name: String? = nil
+  var url: String? = nil
+  var email: String? = nil
+  var status: EventKitParticipantStatus
+  var role: EventKitParticipantRole
+  var type: EventKitParticipantType
+  var isCurrentUser: Bool
+
+  static func fromList(_ list: [Any?]) -> EventKitParticipant? {
+    let name: String? = nilOrValue(list[0])
+    let url: String? = nilOrValue(list[1])
+    let email: String? = nilOrValue(list[2])
+    let status = EventKitParticipantStatus(rawValue: list[3] as! Int)!
+    let role = EventKitParticipantRole(rawValue: list[4] as! Int)!
+    let type = EventKitParticipantType(rawValue: list[5] as! Int)!
+    let isCurrentUser = list[6] as! Bool
+
+    return EventKitParticipant(
+      name: name,
+      url: url,
+      email: email,
+      status: status,
+      role: role,
+      type: type,
+      isCurrentUser: isCurrentUser
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      name,
+      url,
+      email,
+      status.rawValue,
+      role.rawValue,
+      type.rawValue,
+      isCurrentUser,
+    ]
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct EventKitAlarm {
+  var relativeOffsetSeconds: Double? = nil
+  var absoluteDate: EventKitDateTime? = nil
+  var proximity: EventKitAlarmProximity
+  var structuredLocation: EventKitStructuredLocation? = nil
+
+  static func fromList(_ list: [Any?]) -> EventKitAlarm? {
+    let relativeOffsetSeconds: Double? = nilOrValue(list[0])
+    var absoluteDate: EventKitDateTime? = nil
+    if let absoluteDateList: [Any?] = nilOrValue(list[1]) {
+      absoluteDate = EventKitDateTime.fromList(absoluteDateList)
+    }
+    let proximity = EventKitAlarmProximity(rawValue: list[2] as! Int)!
+    var structuredLocation: EventKitStructuredLocation? = nil
+    if let structuredLocationList: [Any?] = nilOrValue(list[3]) {
+      structuredLocation = EventKitStructuredLocation.fromList(structuredLocationList)
+    }
+
+    return EventKitAlarm(
+      relativeOffsetSeconds: relativeOffsetSeconds,
+      absoluteDate: absoluteDate,
+      proximity: proximity,
+      structuredLocation: structuredLocation
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      relativeOffsetSeconds,
+      absoluteDate?.toList(),
+      proximity.rawValue,
+      structuredLocation?.toList(),
+    ]
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct EventKitRecurrenceDayOfWeek {
+  /// EKWeekday: 1 = Sunday … 7 = Saturday.
+  var dayOfTheWeek: Int64
+  /// 0 = every matching weekday; otherwise the Nth (or -Nth) week.
+  var weekNumber: Int64
+
+  static func fromList(_ list: [Any?]) -> EventKitRecurrenceDayOfWeek? {
+    let dayOfTheWeek = list[0] is Int64 ? list[0] as! Int64 : Int64(list[0] as! Int32)
+    let weekNumber = list[1] is Int64 ? list[1] as! Int64 : Int64(list[1] as! Int32)
+
+    return EventKitRecurrenceDayOfWeek(
+      dayOfTheWeek: dayOfTheWeek,
+      weekNumber: weekNumber
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      dayOfTheWeek,
+      weekNumber,
+    ]
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct EventKitRecurrenceRule {
+  var frequency: EventKitRecurrenceFrequency
+  var interval: Int64
+  var endDate: EventKitDateTime? = nil
+  var occurrenceCount: Int64? = nil
+  var daysOfTheWeek: [EventKitRecurrenceDayOfWeek?]? = nil
+  var daysOfTheMonth: [Int64?]? = nil
+  var daysOfTheYear: [Int64?]? = nil
+  var weeksOfTheYear: [Int64?]? = nil
+  var monthsOfTheYear: [Int64?]? = nil
+  var setPositions: [Int64?]? = nil
+  /// Read-only on EKRecurrenceRule (0 = unset, 1–7 = EKWeekday).
+  var firstDayOfTheWeek: Int64? = nil
+
+  static func fromList(_ list: [Any?]) -> EventKitRecurrenceRule? {
+    let frequency = EventKitRecurrenceFrequency(rawValue: list[0] as! Int)!
+    let interval = list[1] is Int64 ? list[1] as! Int64 : Int64(list[1] as! Int32)
+    var endDate: EventKitDateTime? = nil
+    if let endDateList: [Any?] = nilOrValue(list[2]) {
+      endDate = EventKitDateTime.fromList(endDateList)
+    }
+    let occurrenceCount: Int64? = isNullish(list[3]) ? nil : (list[3] is Int64? ? list[3] as! Int64? : Int64(list[3] as! Int32))
+    let daysOfTheWeek: [EventKitRecurrenceDayOfWeek?]? = nilOrValue(list[4])
+    let daysOfTheMonth: [Int64?]? = nilOrValue(list[5])
+    let daysOfTheYear: [Int64?]? = nilOrValue(list[6])
+    let weeksOfTheYear: [Int64?]? = nilOrValue(list[7])
+    let monthsOfTheYear: [Int64?]? = nilOrValue(list[8])
+    let setPositions: [Int64?]? = nilOrValue(list[9])
+    let firstDayOfTheWeek: Int64? = isNullish(list[10]) ? nil : (list[10] is Int64? ? list[10] as! Int64? : Int64(list[10] as! Int32))
+
+    return EventKitRecurrenceRule(
+      frequency: frequency,
+      interval: interval,
+      endDate: endDate,
+      occurrenceCount: occurrenceCount,
+      daysOfTheWeek: daysOfTheWeek,
+      daysOfTheMonth: daysOfTheMonth,
+      daysOfTheYear: daysOfTheYear,
+      weeksOfTheYear: weeksOfTheYear,
+      monthsOfTheYear: monthsOfTheYear,
+      setPositions: setPositions,
+      firstDayOfTheWeek: firstDayOfTheWeek
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      frequency.rawValue,
+      interval,
+      endDate?.toList(),
+      occurrenceCount,
+      daysOfTheWeek,
+      daysOfTheMonth,
+      daysOfTheYear,
+      weeksOfTheYear,
+      monthsOfTheYear,
+      setPositions,
+      firstDayOfTheWeek,
+    ]
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
 struct EventKitCalendar {
   var identifier: String
   var title: String
-  var source: String? = nil
   var color: String? = nil
+  var type: EventKitCalendarType
+  /// Compatibility alias of [sourceTitle].
+  var source: String? = nil
+  var sourceTitle: String? = nil
+  var sourceIdentifier: String? = nil
+  var sourceType: EventKitSourceType
   var isEditable: Bool
   var isSubscribed: Bool
+  var isImmutable: Bool
   var externalId: String? = nil
 
   static func fromList(_ list: [Any?]) -> EventKitCalendar? {
     let identifier = list[0] as! String
     let title = list[1] as! String
-    let source: String? = nilOrValue(list[2])
-    let color: String? = nilOrValue(list[3])
-    let isEditable = list[4] as! Bool
-    let isSubscribed = list[5] as! Bool
-    let externalId: String? = nilOrValue(list[6])
+    let color: String? = nilOrValue(list[2])
+    let type = EventKitCalendarType(rawValue: list[3] as! Int)!
+    let source: String? = nilOrValue(list[4])
+    let sourceTitle: String? = nilOrValue(list[5])
+    let sourceIdentifier: String? = nilOrValue(list[6])
+    let sourceType = EventKitSourceType(rawValue: list[7] as! Int)!
+    let isEditable = list[8] as! Bool
+    let isSubscribed = list[9] as! Bool
+    let isImmutable = list[10] as! Bool
+    let externalId: String? = nilOrValue(list[11])
 
     return EventKitCalendar(
       identifier: identifier,
       title: title,
-      source: source,
       color: color,
+      type: type,
+      source: source,
+      sourceTitle: sourceTitle,
+      sourceIdentifier: sourceIdentifier,
+      sourceType: sourceType,
       isEditable: isEditable,
       isSubscribed: isSubscribed,
+      isImmutable: isImmutable,
       externalId: externalId
     )
   }
@@ -146,10 +416,15 @@ struct EventKitCalendar {
     return [
       identifier,
       title,
-      source,
       color,
+      type.rawValue,
+      source,
+      sourceTitle,
+      sourceIdentifier,
+      sourceType.rawValue,
       isEditable,
       isSubscribed,
+      isImmutable,
       externalId,
     ]
   }
@@ -157,50 +432,126 @@ struct EventKitCalendar {
 
 /// Generated class from Pigeon that represents data sent in messages.
 struct EventKitEvent {
+  /// EKEvent.eventIdentifier. Same value as [eventIdentifier].
   var identifier: String? = nil
+  var eventIdentifier: String? = nil
+  var calendarItemIdentifier: String? = nil
+  var calendarItemExternalIdentifier: String? = nil
   var title: String
   var notes: String? = nil
-  var startDate: EventKitDateTime
-  var endDate: EventKitDateTime
-  var isAllDay: Bool
   var location: String? = nil
   var url: String? = nil
+  var structuredLocation: EventKitStructuredLocation? = nil
+  var startDate: EventKitDateTime
+  var endDate: EventKitDateTime
+  /// IANA name (e.g. "Europe/Berlin"). Null/empty = floating (typical for all-day).
+  var timeZone: String? = nil
+  var startDateUnixMs: Int64? = nil
+  var endDateUnixMs: Int64? = nil
+  var isAllDay: Bool
+  var occurrenceDate: EventKitDateTime? = nil
+  var occurrenceDateUnixMs: Int64? = nil
+  var isDetached: Bool? = nil
   var availability: EventKitEventAvailability
   var status: EventKitEventStatus
+  var creationDateUnixMs: Int64? = nil
+  var creationDate: EventKitDateTime? = nil
+  var lastModifiedDateUnixMs: Int64? = nil
+  var lastModifiedDate: EventKitDateTime? = nil
+  var birthdayContactIdentifier: String? = nil
   var calendarId: String? = nil
+  var organizer: EventKitParticipant? = nil
+  var attendees: [EventKitParticipant?]? = nil
+  var alarms: [EventKitAlarm?]? = nil
+  var recurrenceRules: [EventKitRecurrenceRule?]? = nil
+  /// Derived from [attendees] emails when reading. Not written to EventKit.
   var attendeeEmails: [String?]? = nil
+  /// First of [recurrenceRules] when reading. Written only if [recurrenceRules] is null.
   var recurrenceRule: EventKitRecurrenceRule? = nil
 
   static func fromList(_ list: [Any?]) -> EventKitEvent? {
     let identifier: String? = nilOrValue(list[0])
-    let title = list[1] as! String
-    let notes: String? = nilOrValue(list[2])
-    let startDate = EventKitDateTime.fromList(list[3] as! [Any?])!
-    let endDate = EventKitDateTime.fromList(list[4] as! [Any?])!
-    let isAllDay = list[5] as! Bool
+    let eventIdentifier: String? = nilOrValue(list[1])
+    let calendarItemIdentifier: String? = nilOrValue(list[2])
+    let calendarItemExternalIdentifier: String? = nilOrValue(list[3])
+    let title = list[4] as! String
+    let notes: String? = nilOrValue(list[5])
     let location: String? = nilOrValue(list[6])
     let url: String? = nilOrValue(list[7])
-    let availability = EventKitEventAvailability(rawValue: list[8] as! Int)!
-    let status = EventKitEventStatus(rawValue: list[9] as! Int)!
-    let calendarId: String? = nilOrValue(list[10])
-    let attendeeEmails: [String?]? = nilOrValue(list[11])
+    var structuredLocation: EventKitStructuredLocation? = nil
+    if let structuredLocationList: [Any?] = nilOrValue(list[8]) {
+      structuredLocation = EventKitStructuredLocation.fromList(structuredLocationList)
+    }
+    let startDate = EventKitDateTime.fromList(list[9] as! [Any?])!
+    let endDate = EventKitDateTime.fromList(list[10] as! [Any?])!
+    let timeZone: String? = nilOrValue(list[11])
+    let startDateUnixMs: Int64? = isNullish(list[12]) ? nil : (list[12] is Int64? ? list[12] as! Int64? : Int64(list[12] as! Int32))
+    let endDateUnixMs: Int64? = isNullish(list[13]) ? nil : (list[13] is Int64? ? list[13] as! Int64? : Int64(list[13] as! Int32))
+    let isAllDay = list[14] as! Bool
+    var occurrenceDate: EventKitDateTime? = nil
+    if let occurrenceDateList: [Any?] = nilOrValue(list[15]) {
+      occurrenceDate = EventKitDateTime.fromList(occurrenceDateList)
+    }
+    let occurrenceDateUnixMs: Int64? = isNullish(list[16]) ? nil : (list[16] is Int64? ? list[16] as! Int64? : Int64(list[16] as! Int32))
+    let isDetached: Bool? = nilOrValue(list[17])
+    let availability = EventKitEventAvailability(rawValue: list[18] as! Int)!
+    let status = EventKitEventStatus(rawValue: list[19] as! Int)!
+    let creationDateUnixMs: Int64? = isNullish(list[20]) ? nil : (list[20] is Int64? ? list[20] as! Int64? : Int64(list[20] as! Int32))
+    var creationDate: EventKitDateTime? = nil
+    if let creationDateList: [Any?] = nilOrValue(list[21]) {
+      creationDate = EventKitDateTime.fromList(creationDateList)
+    }
+    let lastModifiedDateUnixMs: Int64? = isNullish(list[22]) ? nil : (list[22] is Int64? ? list[22] as! Int64? : Int64(list[22] as! Int32))
+    var lastModifiedDate: EventKitDateTime? = nil
+    if let lastModifiedDateList: [Any?] = nilOrValue(list[23]) {
+      lastModifiedDate = EventKitDateTime.fromList(lastModifiedDateList)
+    }
+    let birthdayContactIdentifier: String? = nilOrValue(list[24])
+    let calendarId: String? = nilOrValue(list[25])
+    var organizer: EventKitParticipant? = nil
+    if let organizerList: [Any?] = nilOrValue(list[26]) {
+      organizer = EventKitParticipant.fromList(organizerList)
+    }
+    let attendees: [EventKitParticipant?]? = nilOrValue(list[27])
+    let alarms: [EventKitAlarm?]? = nilOrValue(list[28])
+    let recurrenceRules: [EventKitRecurrenceRule?]? = nilOrValue(list[29])
+    let attendeeEmails: [String?]? = nilOrValue(list[30])
     var recurrenceRule: EventKitRecurrenceRule? = nil
-    if let recurrenceRuleList: [Any?] = nilOrValue(list[12]) {
+    if let recurrenceRuleList: [Any?] = nilOrValue(list[31]) {
       recurrenceRule = EventKitRecurrenceRule.fromList(recurrenceRuleList)
     }
 
     return EventKitEvent(
       identifier: identifier,
+      eventIdentifier: eventIdentifier,
+      calendarItemIdentifier: calendarItemIdentifier,
+      calendarItemExternalIdentifier: calendarItemExternalIdentifier,
       title: title,
       notes: notes,
-      startDate: startDate,
-      endDate: endDate,
-      isAllDay: isAllDay,
       location: location,
       url: url,
+      structuredLocation: structuredLocation,
+      startDate: startDate,
+      endDate: endDate,
+      timeZone: timeZone,
+      startDateUnixMs: startDateUnixMs,
+      endDateUnixMs: endDateUnixMs,
+      isAllDay: isAllDay,
+      occurrenceDate: occurrenceDate,
+      occurrenceDateUnixMs: occurrenceDateUnixMs,
+      isDetached: isDetached,
       availability: availability,
       status: status,
+      creationDateUnixMs: creationDateUnixMs,
+      creationDate: creationDate,
+      lastModifiedDateUnixMs: lastModifiedDateUnixMs,
+      lastModifiedDate: lastModifiedDate,
+      birthdayContactIdentifier: birthdayContactIdentifier,
       calendarId: calendarId,
+      organizer: organizer,
+      attendees: attendees,
+      alarms: alarms,
+      recurrenceRules: recurrenceRules,
       attendeeEmails: attendeeEmails,
       recurrenceRule: recurrenceRule
     )
@@ -208,16 +559,35 @@ struct EventKitEvent {
   func toList() -> [Any?] {
     return [
       identifier,
+      eventIdentifier,
+      calendarItemIdentifier,
+      calendarItemExternalIdentifier,
       title,
       notes,
-      startDate.toList(),
-      endDate.toList(),
-      isAllDay,
       location,
       url,
+      structuredLocation?.toList(),
+      startDate.toList(),
+      endDate.toList(),
+      timeZone,
+      startDateUnixMs,
+      endDateUnixMs,
+      isAllDay,
+      occurrenceDate?.toList(),
+      occurrenceDateUnixMs,
+      isDetached,
       availability.rawValue,
       status.rawValue,
+      creationDateUnixMs,
+      creationDate?.toList(),
+      lastModifiedDateUnixMs,
+      lastModifiedDate?.toList(),
+      birthdayContactIdentifier,
       calendarId,
+      organizer?.toList(),
+      attendees,
+      alarms,
+      recurrenceRules,
       attendeeEmails,
       recurrenceRule?.toList(),
     ]
@@ -276,70 +646,33 @@ struct EventKitReminder {
   }
 }
 
-/// Generated class from Pigeon that represents data sent in messages.
-struct EventKitRecurrenceRule {
-  var frequency: EventKitRecurrenceFrequency
-  var interval: Int64
-  var endDate: EventKitDateTime? = nil
-  var occurrenceCount: Int64? = nil
-  var daysOfTheWeek: [Int64?]? = nil
-  var daysOfTheMonth: [Int64?]? = nil
-  var monthsOfTheYear: [Int64?]? = nil
-
-  static func fromList(_ list: [Any?]) -> EventKitRecurrenceRule? {
-    let frequency = EventKitRecurrenceFrequency(rawValue: list[0] as! Int)!
-    let interval = list[1] is Int64 ? list[1] as! Int64 : Int64(list[1] as! Int32)
-    var endDate: EventKitDateTime? = nil
-    if let endDateList: [Any?] = nilOrValue(list[2]) {
-      endDate = EventKitDateTime.fromList(endDateList)
-    }
-    let occurrenceCount: Int64? = isNullish(list[3]) ? nil : (list[3] is Int64? ? list[3] as! Int64? : Int64(list[3] as! Int32))
-    let daysOfTheWeek: [Int64?]? = nilOrValue(list[4])
-    let daysOfTheMonth: [Int64?]? = nilOrValue(list[5])
-    let monthsOfTheYear: [Int64?]? = nilOrValue(list[6])
-
-    return EventKitRecurrenceRule(
-      frequency: frequency,
-      interval: interval,
-      endDate: endDate,
-      occurrenceCount: occurrenceCount,
-      daysOfTheWeek: daysOfTheWeek,
-      daysOfTheMonth: daysOfTheMonth,
-      monthsOfTheYear: monthsOfTheYear
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      frequency.rawValue,
-      interval,
-      endDate?.toList(),
-      occurrenceCount,
-      daysOfTheWeek,
-      daysOfTheMonth,
-      monthsOfTheYear,
-    ]
-  }
-}
-
 private class EventKitHostApiCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
       case 128:
-        return EventKitCalendar.fromList(self.readValue() as! [Any?])
+        return EventKitAlarm.fromList(self.readValue() as! [Any?])
       case 129:
         return EventKitCalendar.fromList(self.readValue() as! [Any?])
       case 130:
-        return EventKitDateTime.fromList(self.readValue() as! [Any?])
+        return EventKitCalendar.fromList(self.readValue() as! [Any?])
       case 131:
         return EventKitDateTime.fromList(self.readValue() as! [Any?])
       case 132:
-        return EventKitEvent.fromList(self.readValue() as! [Any?])
+        return EventKitDateTime.fromList(self.readValue() as! [Any?])
       case 133:
         return EventKitEvent.fromList(self.readValue() as! [Any?])
       case 134:
-        return EventKitRecurrenceRule.fromList(self.readValue() as! [Any?])
+        return EventKitEvent.fromList(self.readValue() as! [Any?])
       case 135:
+        return EventKitParticipant.fromList(self.readValue() as! [Any?])
+      case 136:
+        return EventKitRecurrenceDayOfWeek.fromList(self.readValue() as! [Any?])
+      case 137:
+        return EventKitRecurrenceRule.fromList(self.readValue() as! [Any?])
+      case 138:
         return EventKitReminder.fromList(self.readValue() as! [Any?])
+      case 139:
+        return EventKitStructuredLocation.fromList(self.readValue() as! [Any?])
       default:
         return super.readValue(ofType: type)
     }
@@ -348,29 +681,41 @@ private class EventKitHostApiCodecReader: FlutterStandardReader {
 
 private class EventKitHostApiCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? EventKitCalendar {
+    if let value = value as? EventKitAlarm {
       super.writeByte(128)
       super.writeValue(value.toList())
     } else if let value = value as? EventKitCalendar {
       super.writeByte(129)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitDateTime {
+    } else if let value = value as? EventKitCalendar {
       super.writeByte(130)
       super.writeValue(value.toList())
     } else if let value = value as? EventKitDateTime {
       super.writeByte(131)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitEvent {
+    } else if let value = value as? EventKitDateTime {
       super.writeByte(132)
       super.writeValue(value.toList())
     } else if let value = value as? EventKitEvent {
       super.writeByte(133)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitRecurrenceRule {
+    } else if let value = value as? EventKitEvent {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitReminder {
+    } else if let value = value as? EventKitParticipant {
       super.writeByte(135)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitRecurrenceDayOfWeek {
+      super.writeByte(136)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitRecurrenceRule {
+      super.writeByte(137)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitReminder {
+      super.writeByte(138)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitStructuredLocation {
+      super.writeByte(139)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -404,8 +749,13 @@ protocol EventKitHostApi {
   func getDefaultReminderCalendar(completion: @escaping (Result<EventKitCalendar?, Error>) -> Void)
   func getEvents(startDate: EventKitDateTime, endDate: EventKitDateTime, calendarIdentifiers: [String]?, completion: @escaping (Result<[EventKitEvent], Error>) -> Void)
   func getEvent(identifier: String, completion: @escaping (Result<EventKitEvent?, Error>) -> Void)
-  func saveEvent(event: EventKitEvent, completion: @escaping (Result<String, Error>) -> Void)
-  func removeEvent(identifier: String, completion: @escaping (Result<Bool, Error>) -> Void)
+  func getEventByCalendarItemIdentifier(identifier: String, completion: @escaping (Result<EventKitEvent?, Error>) -> Void)
+  func getCalendarItemsWithExternalIdentifier(externalIdentifier: String, completion: @escaping (Result<[EventKitEvent], Error>) -> Void)
+  func saveEvent(event: EventKitEvent, span: EventKitSpan, completion: @escaping (Result<String, Error>) -> Void)
+  func removeEvent(identifier: String, span: EventKitSpan, completion: @escaping (Result<Bool, Error>) -> Void)
+  /// Presents the system event view (iOS EventKitUI). Returns false when the
+  /// platform cannot present it or the event cannot be found.
+  func presentEventView(eventIdentifier: String, completion: @escaping (Result<Bool, Error>) -> Void)
   func getReminders(predicate: String?, completion: @escaping (Result<[EventKitReminder], Error>) -> Void)
   func getIncompleteReminders(calendarIdentifiers: [String]?, startDate: EventKitDateTime?, endDate: EventKitDateTime?, completion: @escaping (Result<[EventKitReminder], Error>) -> Void)
   func getCompletedReminders(calendarIdentifiers: [String]?, startDate: EventKitDateTime?, endDate: EventKitDateTime?, completion: @escaping (Result<[EventKitReminder], Error>) -> Void)
@@ -577,12 +927,47 @@ class EventKitHostApiSetup {
     } else {
       getEventChannel.setMessageHandler(nil)
     }
+    let getEventByCalendarItemIdentifierChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getEventByCalendarItemIdentifier", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getEventByCalendarItemIdentifierChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let identifierArg = args[0] as! String
+        api.getEventByCalendarItemIdentifier(identifier: identifierArg) { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getEventByCalendarItemIdentifierChannel.setMessageHandler(nil)
+    }
+    let getCalendarItemsWithExternalIdentifierChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getCalendarItemsWithExternalIdentifier", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getCalendarItemsWithExternalIdentifierChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let externalIdentifierArg = args[0] as! String
+        api.getCalendarItemsWithExternalIdentifier(externalIdentifier: externalIdentifierArg) { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getCalendarItemsWithExternalIdentifierChannel.setMessageHandler(nil)
+    }
     let saveEventChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.saveEvent", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       saveEventChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let eventArg = args[0] as! EventKitEvent
-        api.saveEvent(event: eventArg) { result in
+        let spanArg = EventKitSpan(rawValue: args[1] as! Int)!
+        api.saveEvent(event: eventArg, span: spanArg) { result in
           switch result {
             case .success(let res):
               reply(wrapResult(res))
@@ -599,7 +984,8 @@ class EventKitHostApiSetup {
       removeEventChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let identifierArg = args[0] as! String
-        api.removeEvent(identifier: identifierArg) { result in
+        let spanArg = EventKitSpan(rawValue: args[1] as! Int)!
+        api.removeEvent(identifier: identifierArg, span: spanArg) { result in
           switch result {
             case .success(let res):
               reply(wrapResult(res))
@@ -610,6 +996,25 @@ class EventKitHostApiSetup {
       }
     } else {
       removeEventChannel.setMessageHandler(nil)
+    }
+    /// Presents the system event view (iOS EventKitUI). Returns false when the
+    /// platform cannot present it or the event cannot be found.
+    let presentEventViewChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.presentEventView", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      presentEventViewChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let eventIdentifierArg = args[0] as! String
+        api.presentEventView(eventIdentifier: eventIdentifierArg) { result in
+          switch result {
+            case .success(let res):
+              reply(wrapResult(res))
+            case .failure(let error):
+              reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      presentEventViewChannel.setMessageHandler(nil)
     }
     let getRemindersChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getReminders", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
@@ -817,13 +1222,21 @@ private class EventHostApiCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
       case 128:
-        return EventKitDateTime.fromList(self.readValue() as! [Any?])
+        return EventKitAlarm.fromList(self.readValue() as! [Any?])
       case 129:
-        return EventKitEvent.fromList(self.readValue() as! [Any?])
+        return EventKitDateTime.fromList(self.readValue() as! [Any?])
       case 130:
         return EventKitEvent.fromList(self.readValue() as! [Any?])
       case 131:
+        return EventKitEvent.fromList(self.readValue() as! [Any?])
+      case 132:
+        return EventKitParticipant.fromList(self.readValue() as! [Any?])
+      case 133:
+        return EventKitRecurrenceDayOfWeek.fromList(self.readValue() as! [Any?])
+      case 134:
         return EventKitRecurrenceRule.fromList(self.readValue() as! [Any?])
+      case 135:
+        return EventKitStructuredLocation.fromList(self.readValue() as! [Any?])
       default:
         return super.readValue(ofType: type)
     }
@@ -832,17 +1245,29 @@ private class EventHostApiCodecReader: FlutterStandardReader {
 
 private class EventHostApiCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? EventKitDateTime {
+    if let value = value as? EventKitAlarm {
       super.writeByte(128)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitEvent {
+    } else if let value = value as? EventKitDateTime {
       super.writeByte(129)
       super.writeValue(value.toList())
     } else if let value = value as? EventKitEvent {
       super.writeByte(130)
       super.writeValue(value.toList())
-    } else if let value = value as? EventKitRecurrenceRule {
+    } else if let value = value as? EventKitEvent {
       super.writeByte(131)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitParticipant {
+      super.writeByte(132)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitRecurrenceDayOfWeek {
+      super.writeByte(133)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitRecurrenceRule {
+      super.writeByte(134)
+      super.writeValue(value.toList())
+    } else if let value = value as? EventKitStructuredLocation {
+      super.writeByte(135)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -868,8 +1293,8 @@ class EventHostApiCodec: FlutterStandardMessageCodec {
 protocol EventHostApi {
   func getEvents(startDate: EventKitDateTime, endDate: EventKitDateTime, calendarIdentifiers: [String]?, completion: @escaping (Result<[EventKitEvent], Error>) -> Void)
   func getEvent(identifier: String, completion: @escaping (Result<EventKitEvent?, Error>) -> Void)
-  func saveEvent(event: EventKitEvent, completion: @escaping (Result<String, Error>) -> Void)
-  func removeEvent(identifier: String, completion: @escaping (Result<Bool, Error>) -> Void)
+  func saveEvent(event: EventKitEvent, span: EventKitSpan, completion: @escaping (Result<String, Error>) -> Void)
+  func removeEvent(identifier: String, span: EventKitSpan, completion: @escaping (Result<Bool, Error>) -> Void)
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -919,7 +1344,8 @@ class EventHostApiSetup {
       saveEventChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let eventArg = args[0] as! EventKitEvent
-        api.saveEvent(event: eventArg) { result in
+        let spanArg = EventKitSpan(rawValue: args[1] as! Int)!
+        api.saveEvent(event: eventArg, span: spanArg) { result in
           switch result {
             case .success(let res):
               reply(wrapResult(res))
@@ -936,7 +1362,8 @@ class EventHostApiSetup {
       removeEventChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let identifierArg = args[0] as! String
-        api.removeEvent(identifier: identifierArg) { result in
+        let spanArg = EventKitSpan(rawValue: args[1] as! Int)!
+        api.removeEvent(identifier: identifierArg, span: spanArg) { result in
           switch result {
             case .success(let res):
               reply(wrapResult(res))

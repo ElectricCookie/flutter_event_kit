@@ -1,13 +1,16 @@
 #!/bin/bash
 
-# Build script for Pigeon code generation
-# Run this script to generate the necessary code files
+# Generate Pigeon bindings, then sync Swift from shared/ to ios/ and macos/.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
 
 echo "Generating Pigeon code..."
-
-# Generate Dart and Swift code from Pigeon definitions
 dart run pigeon --input pigeons/messages.dart
-
 echo "Pigeon code generation complete!"
 
-cp ./ios/Classes/Shared/Messages.g.swift ./macos/Classes/Shared/Messages.g.swift
+echo "Syncing generated Swift from shared/ to ios/ and macos/..."
+"$SCRIPT_DIR/sync_swift_code.sh"

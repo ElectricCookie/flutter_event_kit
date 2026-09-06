@@ -54,6 +54,65 @@ enum EventKitRecurrenceFrequency {
   yearly,
 }
 
+enum EventKitSpan {
+  thisEvent,
+  futureEvents,
+}
+
+enum EventKitCalendarType {
+  local,
+  calDAV,
+  exchange,
+  subscription,
+  birthday,
+}
+
+enum EventKitSourceType {
+  local,
+  calDAV,
+  exchange,
+  mobileMe,
+  subscribed,
+  birthdays,
+}
+
+enum EventKitParticipantStatus {
+  unknown,
+  pending,
+  accepted,
+  declined,
+  tentative,
+  delegated,
+  completed,
+  inProcess,
+}
+
+enum EventKitParticipantRole {
+  unknown,
+  required,
+  optional,
+  chair,
+  nonParticipant,
+}
+
+enum EventKitParticipantType {
+  unknown,
+  person,
+  room,
+  resource,
+  group,
+}
+
+enum EventKitAlarmProximity {
+  none,
+  enter,
+  leave,
+}
+
+/// Wall-clock date-time components (not UTC unless the event time zone is UTC).
+///
+/// Instant identity for sync lives on [EventKitEvent.startDateUnixMs] /
+/// [EventKitEvent.endDateUnixMs].
 class EventKitDateTime {
   EventKitDateTime({
     required this.year,
@@ -105,14 +164,248 @@ class EventKitDateTime {
   }
 }
 
+class EventKitStructuredLocation {
+  EventKitStructuredLocation({
+    this.title,
+    this.latitude,
+    this.longitude,
+    this.radius,
+  });
+
+  String? title;
+
+  double? latitude;
+
+  double? longitude;
+
+  double? radius;
+
+  Object encode() {
+    return <Object?>[
+      title,
+      latitude,
+      longitude,
+      radius,
+    ];
+  }
+
+  static EventKitStructuredLocation decode(Object result) {
+    result as List<Object?>;
+    return EventKitStructuredLocation(
+      title: result[0] as String?,
+      latitude: result[1] as double?,
+      longitude: result[2] as double?,
+      radius: result[3] as double?,
+    );
+  }
+}
+
+class EventKitParticipant {
+  EventKitParticipant({
+    this.name,
+    this.url,
+    this.email,
+    required this.status,
+    required this.role,
+    required this.type,
+    required this.isCurrentUser,
+  });
+
+  String? name;
+
+  String? url;
+
+  String? email;
+
+  EventKitParticipantStatus status;
+
+  EventKitParticipantRole role;
+
+  EventKitParticipantType type;
+
+  bool isCurrentUser;
+
+  Object encode() {
+    return <Object?>[
+      name,
+      url,
+      email,
+      status.index,
+      role.index,
+      type.index,
+      isCurrentUser,
+    ];
+  }
+
+  static EventKitParticipant decode(Object result) {
+    result as List<Object?>;
+    return EventKitParticipant(
+      name: result[0] as String?,
+      url: result[1] as String?,
+      email: result[2] as String?,
+      status: EventKitParticipantStatus.values[result[3]! as int],
+      role: EventKitParticipantRole.values[result[4]! as int],
+      type: EventKitParticipantType.values[result[5]! as int],
+      isCurrentUser: result[6]! as bool,
+    );
+  }
+}
+
+class EventKitAlarm {
+  EventKitAlarm({
+    this.relativeOffsetSeconds,
+    this.absoluteDate,
+    required this.proximity,
+    this.structuredLocation,
+  });
+
+  double? relativeOffsetSeconds;
+
+  EventKitDateTime? absoluteDate;
+
+  EventKitAlarmProximity proximity;
+
+  EventKitStructuredLocation? structuredLocation;
+
+  Object encode() {
+    return <Object?>[
+      relativeOffsetSeconds,
+      absoluteDate?.encode(),
+      proximity.index,
+      structuredLocation?.encode(),
+    ];
+  }
+
+  static EventKitAlarm decode(Object result) {
+    result as List<Object?>;
+    return EventKitAlarm(
+      relativeOffsetSeconds: result[0] as double?,
+      absoluteDate: result[1] != null
+          ? EventKitDateTime.decode(result[1]! as List<Object?>)
+          : null,
+      proximity: EventKitAlarmProximity.values[result[2]! as int],
+      structuredLocation: result[3] != null
+          ? EventKitStructuredLocation.decode(result[3]! as List<Object?>)
+          : null,
+    );
+  }
+}
+
+class EventKitRecurrenceDayOfWeek {
+  EventKitRecurrenceDayOfWeek({
+    required this.dayOfTheWeek,
+    required this.weekNumber,
+  });
+
+  /// EKWeekday: 1 = Sunday … 7 = Saturday.
+  int dayOfTheWeek;
+
+  /// 0 = every matching weekday; otherwise the Nth (or -Nth) week.
+  int weekNumber;
+
+  Object encode() {
+    return <Object?>[
+      dayOfTheWeek,
+      weekNumber,
+    ];
+  }
+
+  static EventKitRecurrenceDayOfWeek decode(Object result) {
+    result as List<Object?>;
+    return EventKitRecurrenceDayOfWeek(
+      dayOfTheWeek: result[0]! as int,
+      weekNumber: result[1]! as int,
+    );
+  }
+}
+
+class EventKitRecurrenceRule {
+  EventKitRecurrenceRule({
+    required this.frequency,
+    required this.interval,
+    this.endDate,
+    this.occurrenceCount,
+    this.daysOfTheWeek,
+    this.daysOfTheMonth,
+    this.daysOfTheYear,
+    this.weeksOfTheYear,
+    this.monthsOfTheYear,
+    this.setPositions,
+    this.firstDayOfTheWeek,
+  });
+
+  EventKitRecurrenceFrequency frequency;
+
+  int interval;
+
+  EventKitDateTime? endDate;
+
+  int? occurrenceCount;
+
+  List<EventKitRecurrenceDayOfWeek?>? daysOfTheWeek;
+
+  List<int?>? daysOfTheMonth;
+
+  List<int?>? daysOfTheYear;
+
+  List<int?>? weeksOfTheYear;
+
+  List<int?>? monthsOfTheYear;
+
+  List<int?>? setPositions;
+
+  /// Read-only on EKRecurrenceRule (0 = unset, 1–7 = EKWeekday).
+  int? firstDayOfTheWeek;
+
+  Object encode() {
+    return <Object?>[
+      frequency.index,
+      interval,
+      endDate?.encode(),
+      occurrenceCount,
+      daysOfTheWeek,
+      daysOfTheMonth,
+      daysOfTheYear,
+      weeksOfTheYear,
+      monthsOfTheYear,
+      setPositions,
+      firstDayOfTheWeek,
+    ];
+  }
+
+  static EventKitRecurrenceRule decode(Object result) {
+    result as List<Object?>;
+    return EventKitRecurrenceRule(
+      frequency: EventKitRecurrenceFrequency.values[result[0]! as int],
+      interval: result[1]! as int,
+      endDate: result[2] != null
+          ? EventKitDateTime.decode(result[2]! as List<Object?>)
+          : null,
+      occurrenceCount: result[3] as int?,
+      daysOfTheWeek: (result[4] as List<Object?>?)?.cast<EventKitRecurrenceDayOfWeek?>(),
+      daysOfTheMonth: (result[5] as List<Object?>?)?.cast<int?>(),
+      daysOfTheYear: (result[6] as List<Object?>?)?.cast<int?>(),
+      weeksOfTheYear: (result[7] as List<Object?>?)?.cast<int?>(),
+      monthsOfTheYear: (result[8] as List<Object?>?)?.cast<int?>(),
+      setPositions: (result[9] as List<Object?>?)?.cast<int?>(),
+      firstDayOfTheWeek: result[10] as int?,
+    );
+  }
+}
+
 class EventKitCalendar {
   EventKitCalendar({
     required this.identifier,
     required this.title,
-    this.source,
     this.color,
+    required this.type,
+    this.source,
+    this.sourceTitle,
+    this.sourceIdentifier,
+    required this.sourceType,
     required this.isEditable,
     required this.isSubscribed,
+    required this.isImmutable,
     this.externalId,
   });
 
@@ -120,13 +413,24 @@ class EventKitCalendar {
 
   String title;
 
+  String? color;
+
+  EventKitCalendarType type;
+
+  /// Compatibility alias of [sourceTitle].
   String? source;
 
-  String? color;
+  String? sourceTitle;
+
+  String? sourceIdentifier;
+
+  EventKitSourceType sourceType;
 
   bool isEditable;
 
   bool isSubscribed;
+
+  bool isImmutable;
 
   String? externalId;
 
@@ -134,10 +438,15 @@ class EventKitCalendar {
     return <Object?>[
       identifier,
       title,
-      source,
       color,
+      type.index,
+      source,
+      sourceTitle,
+      sourceIdentifier,
+      sourceType.index,
       isEditable,
       isSubscribed,
+      isImmutable,
       externalId,
     ];
   }
@@ -147,11 +456,16 @@ class EventKitCalendar {
     return EventKitCalendar(
       identifier: result[0]! as String,
       title: result[1]! as String,
-      source: result[2] as String?,
-      color: result[3] as String?,
-      isEditable: result[4]! as bool,
-      isSubscribed: result[5]! as bool,
-      externalId: result[6] as String?,
+      color: result[2] as String?,
+      type: EventKitCalendarType.values[result[3]! as int],
+      source: result[4] as String?,
+      sourceTitle: result[5] as String?,
+      sourceIdentifier: result[6] as String?,
+      sourceType: EventKitSourceType.values[result[7]! as int],
+      isEditable: result[8]! as bool,
+      isSubscribed: result[9]! as bool,
+      isImmutable: result[10]! as bool,
+      externalId: result[11] as String?,
     );
   }
 }
@@ -159,59 +473,139 @@ class EventKitCalendar {
 class EventKitEvent {
   EventKitEvent({
     this.identifier,
+    this.eventIdentifier,
+    this.calendarItemIdentifier,
+    this.calendarItemExternalIdentifier,
     required this.title,
     this.notes,
-    required this.startDate,
-    required this.endDate,
-    required this.isAllDay,
     this.location,
     this.url,
+    this.structuredLocation,
+    required this.startDate,
+    required this.endDate,
+    this.timeZone,
+    this.startDateUnixMs,
+    this.endDateUnixMs,
+    required this.isAllDay,
+    this.occurrenceDate,
+    this.occurrenceDateUnixMs,
+    this.isDetached,
     required this.availability,
     required this.status,
+    this.creationDateUnixMs,
+    this.creationDate,
+    this.lastModifiedDateUnixMs,
+    this.lastModifiedDate,
+    this.birthdayContactIdentifier,
     this.calendarId,
+    this.organizer,
+    this.attendees,
+    this.alarms,
+    this.recurrenceRules,
     this.attendeeEmails,
     this.recurrenceRule,
   });
 
+  /// EKEvent.eventIdentifier. Same value as [eventIdentifier].
   String? identifier;
+
+  String? eventIdentifier;
+
+  String? calendarItemIdentifier;
+
+  String? calendarItemExternalIdentifier;
 
   String title;
 
   String? notes;
 
+  String? location;
+
+  String? url;
+
+  EventKitStructuredLocation? structuredLocation;
+
   EventKitDateTime startDate;
 
   EventKitDateTime endDate;
 
+  /// IANA name (e.g. "Europe/Berlin"). Null/empty = floating (typical for all-day).
+  String? timeZone;
+
+  int? startDateUnixMs;
+
+  int? endDateUnixMs;
+
   bool isAllDay;
 
-  String? location;
+  EventKitDateTime? occurrenceDate;
 
-  String? url;
+  int? occurrenceDateUnixMs;
+
+  bool? isDetached;
 
   EventKitEventAvailability availability;
 
   EventKitEventStatus status;
 
+  int? creationDateUnixMs;
+
+  EventKitDateTime? creationDate;
+
+  int? lastModifiedDateUnixMs;
+
+  EventKitDateTime? lastModifiedDate;
+
+  String? birthdayContactIdentifier;
+
   String? calendarId;
 
+  EventKitParticipant? organizer;
+
+  List<EventKitParticipant?>? attendees;
+
+  List<EventKitAlarm?>? alarms;
+
+  List<EventKitRecurrenceRule?>? recurrenceRules;
+
+  /// Derived from [attendees] emails when reading. Not written to EventKit.
   List<String?>? attendeeEmails;
 
+  /// First of [recurrenceRules] when reading. Written only if [recurrenceRules] is null.
   EventKitRecurrenceRule? recurrenceRule;
 
   Object encode() {
     return <Object?>[
       identifier,
+      eventIdentifier,
+      calendarItemIdentifier,
+      calendarItemExternalIdentifier,
       title,
       notes,
-      startDate.encode(),
-      endDate.encode(),
-      isAllDay,
       location,
       url,
+      structuredLocation?.encode(),
+      startDate.encode(),
+      endDate.encode(),
+      timeZone,
+      startDateUnixMs,
+      endDateUnixMs,
+      isAllDay,
+      occurrenceDate?.encode(),
+      occurrenceDateUnixMs,
+      isDetached,
       availability.index,
       status.index,
+      creationDateUnixMs,
+      creationDate?.encode(),
+      lastModifiedDateUnixMs,
+      lastModifiedDate?.encode(),
+      birthdayContactIdentifier,
       calendarId,
+      organizer?.encode(),
+      attendees,
+      alarms,
+      recurrenceRules,
       attendeeEmails,
       recurrenceRule?.encode(),
     ];
@@ -221,19 +615,48 @@ class EventKitEvent {
     result as List<Object?>;
     return EventKitEvent(
       identifier: result[0] as String?,
-      title: result[1]! as String,
-      notes: result[2] as String?,
-      startDate: EventKitDateTime.decode(result[3]! as List<Object?>),
-      endDate: EventKitDateTime.decode(result[4]! as List<Object?>),
-      isAllDay: result[5]! as bool,
+      eventIdentifier: result[1] as String?,
+      calendarItemIdentifier: result[2] as String?,
+      calendarItemExternalIdentifier: result[3] as String?,
+      title: result[4]! as String,
+      notes: result[5] as String?,
       location: result[6] as String?,
       url: result[7] as String?,
-      availability: EventKitEventAvailability.values[result[8]! as int],
-      status: EventKitEventStatus.values[result[9]! as int],
-      calendarId: result[10] as String?,
-      attendeeEmails: (result[11] as List<Object?>?)?.cast<String?>(),
-      recurrenceRule: result[12] != null
-          ? EventKitRecurrenceRule.decode(result[12]! as List<Object?>)
+      structuredLocation: result[8] != null
+          ? EventKitStructuredLocation.decode(result[8]! as List<Object?>)
+          : null,
+      startDate: EventKitDateTime.decode(result[9]! as List<Object?>),
+      endDate: EventKitDateTime.decode(result[10]! as List<Object?>),
+      timeZone: result[11] as String?,
+      startDateUnixMs: result[12] as int?,
+      endDateUnixMs: result[13] as int?,
+      isAllDay: result[14]! as bool,
+      occurrenceDate: result[15] != null
+          ? EventKitDateTime.decode(result[15]! as List<Object?>)
+          : null,
+      occurrenceDateUnixMs: result[16] as int?,
+      isDetached: result[17] as bool?,
+      availability: EventKitEventAvailability.values[result[18]! as int],
+      status: EventKitEventStatus.values[result[19]! as int],
+      creationDateUnixMs: result[20] as int?,
+      creationDate: result[21] != null
+          ? EventKitDateTime.decode(result[21]! as List<Object?>)
+          : null,
+      lastModifiedDateUnixMs: result[22] as int?,
+      lastModifiedDate: result[23] != null
+          ? EventKitDateTime.decode(result[23]! as List<Object?>)
+          : null,
+      birthdayContactIdentifier: result[24] as String?,
+      calendarId: result[25] as String?,
+      organizer: result[26] != null
+          ? EventKitParticipant.decode(result[26]! as List<Object?>)
+          : null,
+      attendees: (result[27] as List<Object?>?)?.cast<EventKitParticipant?>(),
+      alarms: (result[28] as List<Object?>?)?.cast<EventKitAlarm?>(),
+      recurrenceRules: (result[29] as List<Object?>?)?.cast<EventKitRecurrenceRule?>(),
+      attendeeEmails: (result[30] as List<Object?>?)?.cast<String?>(),
+      recurrenceRule: result[31] != null
+          ? EventKitRecurrenceRule.decode(result[31]! as List<Object?>)
           : null,
     );
   }
@@ -299,86 +722,45 @@ class EventKitReminder {
   }
 }
 
-class EventKitRecurrenceRule {
-  EventKitRecurrenceRule({
-    required this.frequency,
-    required this.interval,
-    this.endDate,
-    this.occurrenceCount,
-    this.daysOfTheWeek,
-    this.daysOfTheMonth,
-    this.monthsOfTheYear,
-  });
-
-  EventKitRecurrenceFrequency frequency;
-
-  int interval;
-
-  EventKitDateTime? endDate;
-
-  int? occurrenceCount;
-
-  List<int?>? daysOfTheWeek;
-
-  List<int?>? daysOfTheMonth;
-
-  List<int?>? monthsOfTheYear;
-
-  Object encode() {
-    return <Object?>[
-      frequency.index,
-      interval,
-      endDate?.encode(),
-      occurrenceCount,
-      daysOfTheWeek,
-      daysOfTheMonth,
-      monthsOfTheYear,
-    ];
-  }
-
-  static EventKitRecurrenceRule decode(Object result) {
-    result as List<Object?>;
-    return EventKitRecurrenceRule(
-      frequency: EventKitRecurrenceFrequency.values[result[0]! as int],
-      interval: result[1]! as int,
-      endDate: result[2] != null
-          ? EventKitDateTime.decode(result[2]! as List<Object?>)
-          : null,
-      occurrenceCount: result[3] as int?,
-      daysOfTheWeek: (result[4] as List<Object?>?)?.cast<int?>(),
-      daysOfTheMonth: (result[5] as List<Object?>?)?.cast<int?>(),
-      monthsOfTheYear: (result[6] as List<Object?>?)?.cast<int?>(),
-    );
-  }
-}
-
 class _EventKitHostApiCodec extends StandardMessageCodec {
   const _EventKitHostApiCodec();
   @override
   void writeValue(WriteBuffer buffer, Object? value) {
-    if (value is EventKitCalendar) {
+    if (value is EventKitAlarm) {
       buffer.putUint8(128);
       writeValue(buffer, value.encode());
     } else if (value is EventKitCalendar) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitDateTime) {
+    } else if (value is EventKitCalendar) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
     } else if (value is EventKitDateTime) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitEvent) {
+    } else if (value is EventKitDateTime) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
     } else if (value is EventKitEvent) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitRecurrenceRule) {
+    } else if (value is EventKitEvent) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitReminder) {
+    } else if (value is EventKitParticipant) {
       buffer.putUint8(135);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitRecurrenceDayOfWeek) {
+      buffer.putUint8(136);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitRecurrenceRule) {
+      buffer.putUint8(137);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitReminder) {
+      buffer.putUint8(138);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitStructuredLocation) {
+      buffer.putUint8(139);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -389,21 +771,29 @@ class _EventKitHostApiCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 128: 
-        return EventKitCalendar.decode(readValue(buffer)!);
+        return EventKitAlarm.decode(readValue(buffer)!);
       case 129: 
         return EventKitCalendar.decode(readValue(buffer)!);
       case 130: 
-        return EventKitDateTime.decode(readValue(buffer)!);
+        return EventKitCalendar.decode(readValue(buffer)!);
       case 131: 
         return EventKitDateTime.decode(readValue(buffer)!);
       case 132: 
-        return EventKitEvent.decode(readValue(buffer)!);
+        return EventKitDateTime.decode(readValue(buffer)!);
       case 133: 
         return EventKitEvent.decode(readValue(buffer)!);
       case 134: 
-        return EventKitRecurrenceRule.decode(readValue(buffer)!);
+        return EventKitEvent.decode(readValue(buffer)!);
       case 135: 
+        return EventKitParticipant.decode(readValue(buffer)!);
+      case 136: 
+        return EventKitRecurrenceDayOfWeek.decode(readValue(buffer)!);
+      case 137: 
+        return EventKitRecurrenceRule.decode(readValue(buffer)!);
+      case 138: 
         return EventKitReminder.decode(readValue(buffer)!);
+      case 139: 
+        return EventKitStructuredLocation.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -675,7 +1065,56 @@ class EventKitHostApi {
     }
   }
 
-  Future<String> saveEvent(EventKitEvent arg_event) async {
+  Future<EventKitEvent?> getEventByCalendarItemIdentifier(String arg_identifier) async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getEventByCalendarItemIdentifier';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(<Object?>[arg_identifier]) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else {
+      return (replyList[0] as EventKitEvent?);
+    }
+  }
+
+  Future<List<EventKitEvent?>> getCalendarItemsWithExternalIdentifier(String arg_externalIdentifier) async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.getCalendarItemsWithExternalIdentifier';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(<Object?>[arg_externalIdentifier]) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as List<Object?>?)!.cast<EventKitEvent?>();
+    }
+  }
+
+  Future<String> saveEvent(EventKitEvent arg_event, EventKitSpan arg_span) async {
     const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.saveEvent';
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
       channelName,
@@ -683,7 +1122,7 @@ class EventKitHostApi {
       binaryMessenger: _binaryMessenger,
     );
     final List<Object?>? replyList =
-        await channel.send(<Object?>[arg_event]) as List<Object?>?;
+        await channel.send(<Object?>[arg_event, arg_span.index]) as List<Object?>?;
     if (replyList == null) {
       throw _createConnectionError(channelName);
     } else if (replyList.length > 1) {
@@ -702,7 +1141,7 @@ class EventKitHostApi {
     }
   }
 
-  Future<bool> removeEvent(String arg_identifier) async {
+  Future<bool> removeEvent(String arg_identifier, EventKitSpan arg_span) async {
     const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.removeEvent';
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
       channelName,
@@ -710,7 +1149,36 @@ class EventKitHostApi {
       binaryMessenger: _binaryMessenger,
     );
     final List<Object?>? replyList =
-        await channel.send(<Object?>[arg_identifier]) as List<Object?>?;
+        await channel.send(<Object?>[arg_identifier, arg_span.index]) as List<Object?>?;
+    if (replyList == null) {
+      throw _createConnectionError(channelName);
+    } else if (replyList.length > 1) {
+      throw PlatformException(
+        code: replyList[0]! as String,
+        message: replyList[1] as String?,
+        details: replyList[2],
+      );
+    } else if (replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (replyList[0] as bool?)!;
+    }
+  }
+
+  /// Presents the system event view (iOS EventKitUI). Returns false when the
+  /// platform cannot present it or the event cannot be found.
+  Future<bool> presentEventView(String arg_eventIdentifier) async {
+    const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventKitHostApi.presentEventView';
+    final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
+      channelName,
+      codec,
+      binaryMessenger: _binaryMessenger,
+    );
+    final List<Object?>? replyList =
+        await channel.send(<Object?>[arg_eventIdentifier]) as List<Object?>?;
     if (replyList == null) {
       throw _createConnectionError(channelName);
     } else if (replyList.length > 1) {
@@ -985,17 +1453,29 @@ class _EventHostApiCodec extends StandardMessageCodec {
   const _EventHostApiCodec();
   @override
   void writeValue(WriteBuffer buffer, Object? value) {
-    if (value is EventKitDateTime) {
+    if (value is EventKitAlarm) {
       buffer.putUint8(128);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitEvent) {
+    } else if (value is EventKitDateTime) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
     } else if (value is EventKitEvent) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is EventKitRecurrenceRule) {
+    } else if (value is EventKitEvent) {
       buffer.putUint8(131);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitParticipant) {
+      buffer.putUint8(132);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitRecurrenceDayOfWeek) {
+      buffer.putUint8(133);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitRecurrenceRule) {
+      buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    } else if (value is EventKitStructuredLocation) {
+      buffer.putUint8(135);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -1006,13 +1486,21 @@ class _EventHostApiCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 128: 
-        return EventKitDateTime.decode(readValue(buffer)!);
+        return EventKitAlarm.decode(readValue(buffer)!);
       case 129: 
-        return EventKitEvent.decode(readValue(buffer)!);
+        return EventKitDateTime.decode(readValue(buffer)!);
       case 130: 
         return EventKitEvent.decode(readValue(buffer)!);
       case 131: 
+        return EventKitEvent.decode(readValue(buffer)!);
+      case 132: 
+        return EventKitParticipant.decode(readValue(buffer)!);
+      case 133: 
+        return EventKitRecurrenceDayOfWeek.decode(readValue(buffer)!);
+      case 134: 
         return EventKitRecurrenceRule.decode(readValue(buffer)!);
+      case 135: 
+        return EventKitStructuredLocation.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -1078,7 +1566,7 @@ class EventHostApi {
     }
   }
 
-  Future<String> saveEvent(EventKitEvent arg_event) async {
+  Future<String> saveEvent(EventKitEvent arg_event, EventKitSpan arg_span) async {
     const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventHostApi.saveEvent';
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
       channelName,
@@ -1086,7 +1574,7 @@ class EventHostApi {
       binaryMessenger: _binaryMessenger,
     );
     final List<Object?>? replyList =
-        await channel.send(<Object?>[arg_event]) as List<Object?>?;
+        await channel.send(<Object?>[arg_event, arg_span.index]) as List<Object?>?;
     if (replyList == null) {
       throw _createConnectionError(channelName);
     } else if (replyList.length > 1) {
@@ -1105,7 +1593,7 @@ class EventHostApi {
     }
   }
 
-  Future<bool> removeEvent(String arg_identifier) async {
+  Future<bool> removeEvent(String arg_identifier, EventKitSpan arg_span) async {
     const String channelName = 'dev.flutter.pigeon.flutter_event_kit.EventHostApi.removeEvent';
     final BasicMessageChannel<Object?> channel = BasicMessageChannel<Object?>(
       channelName,
@@ -1113,7 +1601,7 @@ class EventHostApi {
       binaryMessenger: _binaryMessenger,
     );
     final List<Object?>? replyList =
-        await channel.send(<Object?>[arg_identifier]) as List<Object?>?;
+        await channel.send(<Object?>[arg_identifier, arg_span.index]) as List<Object?>?;
     if (replyList == null) {
       throw _createConnectionError(channelName);
     } else if (replyList.length > 1) {
