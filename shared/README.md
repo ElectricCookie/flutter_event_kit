@@ -15,13 +15,13 @@ This directory contains the shared Swift implementation for the Flutter EventKit
 To sync the shared code to both iOS and macOS platforms, run:
 
 ```bash
-./scripts/sync_swift_code.sh
+./tool/sync_swift_code.sh
 ```
 
 This script will:
 
-1. Copy `FlutterEventKitPlugin.swift` to both `ios/Classes/` and `macos/Classes/`
-2. Copy all files from `Classes/Shared/` to both `ios/Classes/Shared/` and `macos/Classes/Shared/`
+1. Copy `FlutterEventKitPlugin.swift` to `ios/flutter_event_kit/Sources/flutter_event_kit/` and `macos/flutter_event_kit/Sources/flutter_event_kit/`
+2. Copy all files from `Classes/Shared/` into the `Shared/` directory under each of those source roots
 
 ## Workflow
 

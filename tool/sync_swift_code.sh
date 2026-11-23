@@ -11,18 +11,21 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo "Syncing Swift code from shared directory..."
 
-# Create directories if they don't exist
-mkdir -p "$PROJECT_ROOT/ios/Classes/Shared"
-mkdir -p "$PROJECT_ROOT/macos/Classes/Shared"
+# Swift Package Manager source directories. CocoaPods reads the same files.
+IOS_DEST="$PROJECT_ROOT/ios/flutter_event_kit/Sources/flutter_event_kit"
+MACOS_DEST="$PROJECT_ROOT/macos/flutter_event_kit/Sources/flutter_event_kit"
+
+mkdir -p "$IOS_DEST/Shared"
+mkdir -p "$MACOS_DEST/Shared"
 
 # Copy main plugin file
 echo "Copying FlutterEventKitPlugin.swift..."
-cp "$PROJECT_ROOT/shared/Classes/FlutterEventKitPlugin.swift" "$PROJECT_ROOT/ios/Classes/"
-cp "$PROJECT_ROOT/shared/Classes/FlutterEventKitPlugin.swift" "$PROJECT_ROOT/macos/Classes/"
+cp "$PROJECT_ROOT/shared/Classes/FlutterEventKitPlugin.swift" "$IOS_DEST/"
+cp "$PROJECT_ROOT/shared/Classes/FlutterEventKitPlugin.swift" "$MACOS_DEST/"
 
 # Copy shared files
 echo "Copying shared files..."
-cp "$PROJECT_ROOT/shared/Classes/Shared/"* "$PROJECT_ROOT/ios/Classes/Shared/"
-cp "$PROJECT_ROOT/shared/Classes/Shared/"* "$PROJECT_ROOT/macos/Classes/Shared/"
+cp "$PROJECT_ROOT/shared/Classes/Shared/"* "$IOS_DEST/Shared/"
+cp "$PROJECT_ROOT/shared/Classes/Shared/"* "$MACOS_DEST/Shared/"
 
 echo "Swift code sync completed successfully!"

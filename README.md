@@ -130,10 +130,10 @@ List<Reminder> reminders = await FlutterEventKit.getReminders();
 
 ## Requirements
 
-- **iOS**: 12.0+
+- **iOS**: 13.0+
 - **macOS**: 10.15+
-- **Flutter**: 3.3.0+
-- **Dart**: 3.9.0+
+- **Flutter**: 3.41.0+
+- **Dart**: 3.11.0+
 
 ## Development
 
@@ -162,7 +162,7 @@ This generates:
 
 1. **Update Pigeon definitions** in `pigeons/messages.dart`
 2. **Implement in shared service** in `shared/Classes/Shared/EventKitService.swift`
-3. **Add conversion methods** in both platform plugins
+3. **Add conversion methods** in `shared/Classes/FlutterEventKitPlugin.swift`
 4. **Update Dart API** in `lib/flutter_event_kit.dart`
 5. **Regenerate code** using Pigeon
 
@@ -177,7 +177,7 @@ The plugin maintains a shared Swift implementation between iOS and macOS platfor
 
 This script:
 
-- Copies `FlutterEventKitPlugin.swift` to both platform directories
+- Copies `FlutterEventKitPlugin.swift` into both Swift package source directories
 - Syncs all shared files from `shared/Classes/Shared/` to both platforms
 - Ensures consistency between iOS and macOS implementations
 
@@ -188,7 +188,7 @@ This script:
 Pigeon generates type-safe code for:
 
 - **Dart side**: `lib/src/messages.g.dart`
-- **Swift side**: `ios/Classes/Shared/Messages.g.swift`
+- **Swift side**: `ios/flutter_event_kit/Sources/flutter_event_kit/Shared/Messages.g.swift`
 
 This eliminates the need for manual method channel implementation and provides compile-time type safety.
 
@@ -206,12 +206,16 @@ flutter_event_kit/
 │   └── Shared/
 │       ├── EventKitService.swift       # Shared EventKit logic
 │       └── Messages.g.swift            # Pigeon-generated Swift code
-├── ios/Classes/                        # iOS-specific files
-│   ├── FlutterEventKitPlugin.swift     # iOS plugin implementation
-│   └── Shared/                         # Synced from shared/
-├── macos/Classes/                      # macOS-specific files
-│   ├── FlutterEventKitPlugin.swift     # macOS plugin implementation
-│   └── Shared/                         # Synced from shared/
+├── ios/flutter_event_kit/              # iOS Swift package
+│   ├── Package.swift
+│   └── Sources/flutter_event_kit/
+│       ├── FlutterEventKitPlugin.swift # Synced from shared/
+│       └── Shared/                     # Synced from shared/
+├── macos/flutter_event_kit/            # macOS Swift package
+│   ├── Package.swift
+│   └── Sources/flutter_event_kit/
+│       ├── FlutterEventKitPlugin.swift # Synced from shared/
+│       └── Shared/                     # Synced from shared/
 ├── pigeons/
 │   └── messages.dart                    # Pigeon message definitions
 └── tool/
